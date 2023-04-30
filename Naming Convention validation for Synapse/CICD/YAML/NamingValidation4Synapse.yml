@@ -1,0 +1,23 @@
+trigger: none
+
+pool:
+  vmImage: 'windows-latest'
+  # name: Default (for self hosted DevOps agents)
+
+steps:
+- task: PowerShell@2
+  displayName: 'Treeview to check agent folders'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Showing folder $(System.DefaultWorkingDirectory)"
+      tree "$(System.DefaultWorkingDirectory)" /F
+- task: PowerShell@2
+  displayName: 'Validate Naming Conventions'
+  inputs:
+    targetType: 'FilePath'
+    filePath: '$(System.DefaultWorkingDirectory)/CICD/PowerShell/SynapseNamingConventions.ps1'
+    arguments: > # Use this to avoid newline characters in multiline string
+      -SynapseDevWorkspaceName "ilxdwhdev"
+      -ArtifactPath $(System.DefaultWorkingDirectory)\Synapse
+      -NamingConventionPath $(System.DefaultWorkingDirectory)\CICD\JSON\NamingConvention.json
