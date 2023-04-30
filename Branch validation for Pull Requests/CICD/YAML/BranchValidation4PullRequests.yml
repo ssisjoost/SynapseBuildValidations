@@ -1,4 +1,9 @@
 trigger: none
+
+pool:
+  vmImage: 'windows-latest'
+  # name: Default (for self hosted DevOps agents)
+
 steps:
 - task: PowerShell@2
   displayName: 'Validate branches in Pull Request'
@@ -60,6 +65,7 @@ steps:
         Write-Host "All branches in order: [$($branches -join "] <-> [")] <-> [feature branches]."
         Write-Host "Checking pull request from $($SourceBranchName) [$($SourceBranchId)] to $($TargetBranchName) [$($TargetBranchId)]."
 
+        # Check branch rules and exit 0 for valid 1 for not not valid
         if ($SourceBranchName -like "*$($fixBranch)*")
         {
             # Pull request for bugbix branches are unrestricted
@@ -74,7 +80,7 @@ steps:
         }
         else
         {
-            # Invallid pull request that skips one or more branches
+            # Invalid pull request that skips one or more branches
             Write-Host "##vso[task.logissue type=error]Pull request is invalid. Skipping branches is not allowed."
             exit 1
         }
