@@ -1,0 +1,52 @@
+{
+"Prefixes": [
+	    {"type":"Pipeline","prefix":"PL"},
+	    {"type":"Dataset","prefix":"DS"},
+	    {"type":"LinkedService","prefix":"LS"},
+	    {"type":"Notebook","prefix":"NB"},
+		{"type":"Trigger","prefix":"TR"},
+		{"type":"Script","prefix":"SC"},
+		{"type":"Dataflow","prefix":"DF"}
+],
+"Activities": [
+	    {"type":"WebActivity","prefix":"WEB"},
+	    {"type":"ForEach","prefix":"FEL"},
+	    {"type":"Copy","prefix":"CPY"},
+	    {"type":"GetMetadata","prefix":"MTA"},
+	    {"type":"IfCondition","prefix":"IFC"},
+	    {"type":"SetVariable","prefix":"VAR"},
+	    {"type":"Lookup","prefix":"LKP"},
+	    {"type":"SqlServerStoredProcedure","prefix":"STP"},
+	    {"type":"ExecutePipeline","prefix":"EXP"},
+        {"type":"Script","prefix":"SCP"},
+        {"type":"Delete","prefix":"DEL"},
+        {"type":"Until","prefix":"UNT"},
+        {"type":"Wait","prefix":"WAI"},
+	    {"type":"Filter","prefix":"FIL"},
+		{"type":"Fail","prefix":"FAI"}
+],
+"LinkedServices": [
+	    {"type":"AzureBlobFS","prefix":"ADL"},
+	    {"type":"AzureKeyVault","prefix":"AKV"},
+		{"type":"AzureSqlDatabase","prefix":"ASQL"},
+		{"type":"AzureSqlDW","prefix":"ASDW"},
+		{"type":"HttpServer","prefix":"HTTP"},
+		{"type":"MySql","prefix":"MSQL"},
+		{"type":"PostgreSql","prefix":"PSQL"},
+		{"type":"RestService","prefix":"REST"},
+		{"type":"SqlServer","prefix":"SQL"}
+],
+"Datasets": [
+	    {"type":"AzureSqlTable","prefix":"ASQL"},
+	    {"type":"Binary","prefix":"ADL_BIN"},
+		{"type":"DelimitedText","prefix":"ADL_CSV"},
+		{"type":"Json","prefix":"ADL_JSON"},
+		{"type":"MySqlTable","prefix":"MSQL"},
+		{"type":"Parquet","prefix":"ADL_PARQUET"},
+		{"type":"PostgreSqlTable","prefix":"PSQL"},
+		{"type":"RestResource","prefix":"REST"},
+		{"type":"SqlServerTable","prefix":"SQL"}
+],
+"TriggerPostFixes":["DEV","TST","ACC","PRD","GEN"],
+"NamingSeparator":"_"
+}
