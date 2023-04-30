@@ -1,0 +1,80 @@
+trigger: none
+steps:
+- task: PowerShell@2
+  displayName: 'Validate branches in Pull Request'
+  inputs:
+    targetType: 'inline'
+    script: |
+        #######################################################################
+        # PARAMETERS FOR SCRIPT
+        #######################################################################
+        # All branches in order. You can only do a pull request one up or down.
+        # Feature and / or personal branches can only be pulled to or from the
+        # latest branch in the row.
+        [String[]]$branches = "main", "acceptance", "test", "development", "sprint"
+
+        # Bugfix or hotfix branches can be pulled to and from all other branches
+        [String]$fixBranch = "bugfix"
+
+
+        #######################################################################
+        # DO NOT CHANGE CODE BELOW
+        #######################################################################
+        $SourceBranchName = "$(System.PullRequest.SourceBranch)".toLower().Replace("refs/heads/", "") # sourceBranchName does not exist
+        $TargetBranchName = "$(System.PullRequest.targetBranchName)"
+
+        function getBranchNumber
+        {
+            <#
+                .SYNOPSIS
+                Get the order number of the branch by looping through all branches and checking then branchname
+                .PARAMETER BranchName
+                Name of the branch you want to check
+                .EXAMPLE
+                getBranchNumber -BranchName "myBranch"
+            #>
+            param (
+                [string]$BranchName
+            )
+            # Loop through branches array to find a specific branchname
+            for ($i = 0; $i -lt $branches.count; $i++)
+            {
+                # Find specific branchname
+                if ($branches[$i] -eq $BranchName)
+                {
+                    # Return branch order number
+                    # (one-based instead if zero-based)
+                    return $i + 1
+                }
+            }
+            # Unknown branch = feature branch
+            return $branches.count + 1
+        }
+
+
+        # Retrieve branch order
+        $SourceBranchId = getBranchNumber($SourceBranchName)
+        $TargetBranchId = getBranchNumber($TargetBranchName)
+
+        # Show extra information to check the outcome of the check below
+        Write-Host "All branches in order: [$($branches -join "] <-> [")] <-> [feature branches]."
+        Write-Host "Checking pull request from $($SourceBranchName) [$($SourceBranchId)] to $($TargetBranchName) [$($TargetBranchId)]."
+
+        if ($SourceBranchName -like "*$($fixBranch)*")
+        {
+            # Pull request for bugbix branches are unrestricted
+            Write-Host "Pull request for Bugfix or hotfix branches are unrestricted."
+            exit 0
+        }
+        elseif ([math]::abs($SourceBranchId-$TargetBranchId) -le 1)
+        {
+            # Not skipping branches or going from feature branch to feature branch
+            Write-Host "Pull request is valid."
+            exit 0
+        }
+        else
+        {
+            # Invallid pull request that skips one or more branches
+            Write-Host "##vso[task.logissue type=error]Pull request is invalid. Skipping branches is not allowed."
+            exit 1
+        }
