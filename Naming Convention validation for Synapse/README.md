@@ -15,6 +15,7 @@ Suggestions for further improvements are below. Please suggest your own.
 - [ ] Look for items ending on _copy1 or _copy2
 - [ ] Look for bad defaults settings like the 7 day timeout
 - [ ] Look empty descriptions
+- [ ] Make it available for ADF
 - [ ] Improve feedback and clarity in logs
 
 
