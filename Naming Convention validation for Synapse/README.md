@@ -8,11 +8,13 @@ Suggestions for further improvements are below. Please suggest your own.
 - [ ] Add folder information for Data Flows, SQL Scripts and KQL Scripts
 - [ ] Naming conventions within Data Flows (please share yours)
 - [ ] Option to skip or ignore certain parts from Synapse if you for example don't have/want a naming convention within the Data Flows
-- [ ] Option to change the errors into warnings for if you just start inplementing naming conventions and you can't change everything at once
-- [ ] Option to allow a certain percentage of errors
+- [ ] Option to change some of the errors into warnings for when you just want to test the basics
+- [ ] Option to allow a certain percentage of errors before failing the validation
 - [ ] Option to only show the mistakes and ignore everything that is correct
 - [ ] Take Linked Service into consideration to determine Data Set names
 - [ ] Look for items ending on _copy1 or _copy2
+- [ ] Look for bad defaults settings like the 7 day timeout
+- [ ] Look empty descriptions
 - [ ] Improve feedback and clarity in logs
 
 
