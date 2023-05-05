@@ -5,7 +5,8 @@
 	    {"type":"LinkedService","prefix":"LS"},
 	    {"type":"Notebook","prefix":"NB"},
 		{"type":"Trigger","prefix":"TR"},
-		{"type":"Script","prefix":"SC"},
+		{"type":"SqlScript","prefix":"SQL"},
+		{"type":"KqlScript","prefix":"KQL"},
 		{"type":"Dataflow","prefix":"DF"}
 ],
 "Activities": [

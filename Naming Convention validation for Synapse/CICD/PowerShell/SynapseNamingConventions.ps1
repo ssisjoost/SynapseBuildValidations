@@ -624,10 +624,21 @@ if (Test-Path (Join-Path $ArtifactPath "dataflow"))
     # Loop through each Triggers file
     foreach ($dataflow in $artifactDataflows)
     {
-        # Pipeline loggin
+        # Read file content to retrieve dataflow JSON
+        $dataflowContent = Get-Content $dataflow.FullName | Out-String | ConvertFrom-Json
+
+        # Determine dataflow path within the Synapse Workspace for (showing only)
+        $dataflowPath = "\"
+        # If dataflow is not in the root retrieve folder from JSON
+        if (HasProperty -JsonObject $dataflowContent.properties -PropertyName "folder")
+        {
+            $dataflowPath = $dataflowPath + $dataflowContent.properties.folder.name.replace("/","\") + "\"
+        }
+
+        # Dataflow loggin
         Write-Output ""
         Write-Output "=============================================================================================="
-        Write-Output "Checking dataflow [$($dataflow.BaseName)]"
+        Write-Output "Checking dataflow [$($dataflowPath)$($dataflow.BaseName)]"
         Write-Output "=============================================================================================="
 
         # Check trigger name prefix
@@ -657,7 +668,7 @@ else
 if (Test-Path (Join-Path $ArtifactPath "sqlscript"))
 {
     # Retrieve dataflow prefix
-    $sqlscriptConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "SqlScripts" }
+    $sqlscriptConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "SqlScript" }
 
     # Retrieve all Linkes Service files
     $artifactSqlScripts = Get-ChildItem -Path (Join-Path $ArtifactPath "sqlscript") -Filter *.json | Select-Object -Property FullName, BaseName
@@ -665,10 +676,21 @@ if (Test-Path (Join-Path $ArtifactPath "sqlscript"))
     # Loop through each Triggers file
     foreach ($sqlscript in $artifactSqlScripts)
     {
+        # Read file content to retrieve sqlscript JSON
+        $sqlscriptContent = Get-Content $sqlscript.FullName | Out-String | ConvertFrom-Json
+
+        # Determine sqlscript path within the Synapse Workspace for (showing only)
+        $sqlscriptPath = "\"
+        # If sqlscript is not in the root retrieve folder from JSON
+        if (HasProperty -JsonObject $sqlscriptContent.properties -PropertyName "folder")
+        {
+            $sqlscriptPath = $sqlscriptPath + $sqlscriptContent.properties.folder.name.replace("/","\") + "\"
+        }
+
         # Sql Script loggin
         Write-Output ""
         Write-Output "=============================================================================================="
-        Write-Output "Checking dataflow [$($sqlscript.BaseName)]"
+        Write-Output "Checking dataflow [$($sqlscriptPath)$($sqlscript.BaseName)]"
         Write-Output "=============================================================================================="
 
         # Check sql script name prefix
@@ -699,7 +721,7 @@ else
 if (Test-Path (Join-Path $ArtifactPath "kqlscript"))
 {
     # Retrieve dataflow prefix
-    $kqlscriptConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "KqlScripts" }
+    $kqlscriptConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "KqlScript" }
 
     # Retrieve all Linkes Service files
     $artifactKqlScripts = Get-ChildItem -Path (Join-Path $ArtifactPath "kqlscript") -Filter *.json | Select-Object -Property FullName, BaseName
@@ -707,6 +729,17 @@ if (Test-Path (Join-Path $ArtifactPath "kqlscript"))
     # Loop through each Triggers file
     foreach ($kqlscript in $artifactKqlScripts)
     {
+        # Read file content to retrieve kqlscript JSON
+        $kqlscriptContent = Get-Content $kqlscript.FullName | Out-String | ConvertFrom-Json
+
+        # Determine kqlscript path within the Synapse Workspace for (showing only)
+        $kqlscriptPath = "\"
+        # If kqlscript is not in the root retrieve folder from JSON
+        if (HasProperty -JsonObject $kqlscriptContent.properties -PropertyName "folder")
+        {
+            $kqlscriptPath = $kqlscriptPath + $kqlscriptContent.properties.folder.name.replace("/","\") + "\"
+        }
+
         # Kql Script loggin
         Write-Output ""
         Write-Output "=============================================================================================="
