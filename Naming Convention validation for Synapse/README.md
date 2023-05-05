@@ -5,7 +5,7 @@ There are multiple Naming Conventions, most of them are for Azure Data Factory l
 
 ## TODO
 Suggestions for further improvements are below. Please suggest your own.
-- [ ] Add folder information for Data Flows, SQL Scripts and KQL Scripts
+- [x] Add folder information for Data Flows, SQL Scripts and KQL Scripts
 - [ ] Naming conventions within Data Flows (please share yours)
 - [ ] Option to skip or ignore certain parts from Synapse if you for example don't have/want a naming convention within the Data Flows
 - [ ] Option to change some of the errors into warnings for when you just want to test the basics
