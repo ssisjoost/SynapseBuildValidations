@@ -743,7 +743,7 @@ if (Test-Path (Join-Path $ArtifactPath "kqlscript"))
         # Kql Script loggin
         Write-Output ""
         Write-Output "=============================================================================================="
-        Write-Output "Checking KQL script [$($kqlscript.BaseName)]"
+        Write-Output "Checking KQL script [$($kqlscriptPath)$($kqlscript.BaseName)]"
         Write-Output "=============================================================================================="
 
         # Check kql script name prefix
@@ -781,7 +781,7 @@ else
 }
 if (($activityErrorCount + $activitySuccessCount) -eq 0)
 {
-    Write-Output "Activities      : no activities found"
+    Write-Output "Activities     : no activities found"
 }
 else
 {
@@ -797,7 +797,7 @@ else
 }
 if (($linkedServiceErrorCount + $linkedServiceSuccessCount) -eq 0)
 {
-    Write-Output "LinkedServices      : no linked services found" # should not occur since there are two by default that cannot be deleted
+    Write-Output "LinkedServices : no linked services found" # should not occur since there are two by default that cannot be deleted
 }
 else
 {
@@ -805,7 +805,7 @@ else
 }
 if (($datasetErrorCount + $datasetSuccessCount) -eq 0)
 {
-    Write-Output "Datasets      : no datasets found"
+    Write-Output "Datasets       : no datasets found"
 }
 else
 {
@@ -813,7 +813,7 @@ else
 }
 if (($triggerErrorCount + $triggerSuccessCount) -eq 0)
 {
-    Write-Output "Triggers      : no triggers found"
+    Write-Output "Triggers       : no triggers found"
 }
 else
 {
