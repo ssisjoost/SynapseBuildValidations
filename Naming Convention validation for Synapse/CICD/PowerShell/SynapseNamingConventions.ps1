@@ -18,21 +18,14 @@ Param(
    [ValidateNotNullOrEmpty()]
    [Alias("NamingConventionFilePath","NamingConventionJsonFilePath")]
    [string]
-   $NamingConventionPath,
+   $NamingConventionPath
 
-   [Parameter(Mandatory=$true,
-   HelpMessage="Include the check for Resource suffixes (checks for _copy suffixes).")]
-   [ValidateNotNullOrEmpty()]
-   [Alias("CheckResourceSuffix","ResourceSuffix")]
-   [bool]
-   $CheckResourceSuffixes
 )
 
 $ErrorActionPreference = "Stop"
 #####################################################
 # Variables for counting errors
 #####################################################
-[int]$Script:suffixErrorCount = 0
 [int]$Script:pipelineErrorCount = 0
 [int]$Script:pipelineSuccessCount = 0
 [int]$Script:activityErrorCount = 0
@@ -51,6 +44,8 @@ $ErrorActionPreference = "Stop"
 [int]$Script:sqlscriptSuccessCount = 0
 [int]$Script:kqlscriptErrorCount = 0
 [int]$Script:kqlscriptSuccessCount = 0
+[int]$Script:invalidPostfixErrorCount = 0
+[int]$Script:invalidPostfixSuccessCount = 0
 
 #####################################################
 # Check parameters
@@ -330,27 +325,6 @@ function CheckDatasetServicePrefix
 # END Functions
 #####################################################
 
-#####################################################
-# CHECK ALL RESOURCE SUFFIXES
-#####################################################
-
-if ($CheckResourceSuffixes -eq $true) {
-    # Assign all resources to the resources variable while checking on the _copy suffix
-    $resources = Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Where-Object { $_.BaseName -match '_copy([1-9][0-9]?|99)$'} | Select-Object -Property FullName, BaseName
-
-    # Notify when there are resources with the _copy suffix
-    if ($null -ne $resources){
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Found resources with the _copy suffix"
-    } else {
-        Write-Output "$([char]10003) Found no resources with the _copy suffix"
-    }
-
-    # Count each resource in the resources variable
-    foreach ($resource in $resources.BaseName)
-    {    
-        $Script:suffixErrorCount++
-    }
-}
 # Retrieve naming separator from naming convention config
 [string]$namingSeparator = $namingConvention.NamingSeparator
 
@@ -793,95 +767,124 @@ else
     Write-Output "No kql scripts found in artifact"
     Write-Output "=============================================================================================="
 }
+
+
+#####################################################
+# CHECK ALL RESOURCE SUFFIXES
+#####################################################
+[bool]$CheckResourceSuffixes = $true
+
+if ($CheckResourceSuffixes -eq $true) {
+    # Assign all resources to the resources variable while checking on the _copy suffix
+    $incorrectResources = Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Where-Object { $_.BaseName -match '_copy([1-9][0-9]?)$'} | Select-Object -Property FullName, BaseName
+
+    [int]$Script:invalidPostfixErrorCount = ($incorrectResources | Measure-Object).Count
+    [int]$Script:invalidPostfixSuccessCount = (Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Measure-Object).Count - ($incorrectResources | Measure-Object).Count
+
+    Write-Output ""
+    Write-Output "=============================================================================================="
+    Write-Output "Invalid postfixes $(($incorrectResources | Measure-Object).Count)"
+    Write-Output "=============================================================================================="
+    # Loop through all resources with an invalid _copy* postfix
+    foreach ($resource in $incorrectResources)
+    {
+        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Found $((Get-Item $resource.FullName).Directory.Name) resource [$($resource.BaseName)] with the _copy postfix"
+    }
+
+}
+
+
 Write-Output ""
 Write-Output "=============================================================================================="
 Write-Output "Summary"
 Write-Output "=============================================================================================="
 
-if ($suffixErrorCount -eq 0)
-{
-    Write-Output "Suffixes       : no incorrect suffixes found"
-}
-else
-{
-    Write-Output "Suffixes       : $($Script:suffixErrorCount) _copy suffix related errors in the artifact"
-}
+
 if (($pipelineErrorCount + $pipelineSuccessCount) -eq 0)
 {
-    Write-Output "Pipelines      : no pipelines found"
+    Write-Output "Pipelines       : no pipelines found"
 }
 else
 {
-    Write-Output "Pipelines      : $($Script:pipelineErrorCount) errors out of $($Script:pipelineErrorCount + $Script:pipelineSuccessCount) - $([Math]::Round(($Script:pipelineErrorCount / ($Script:pipelineErrorCount + $Script:pipelineSuccessCount) * 100), 2))%"
+    Write-Output "Pipelines       : $($Script:pipelineErrorCount) errors out of $($Script:pipelineErrorCount + $Script:pipelineSuccessCount) - $([Math]::Round(($Script:pipelineErrorCount / ($Script:pipelineErrorCount + $Script:pipelineSuccessCount) * 100), 2))%"
 }
 if (($activityErrorCount + $activitySuccessCount) -eq 0)
 {
-    Write-Output "Activities     : no activities found"
+    Write-Output "Activities      : no activities found"
 }
 else
 {
-    Write-Output "Activities     : $($Script:activityErrorCount) errors out of $($Script:activityErrorCount + $Script:activitySuccessCount) - $([Math]::Round(($Script:activityErrorCount / ($Script:activityErrorCount + $Script:activitySuccessCount) * 100), 2))%"
+    Write-Output "Activities      : $($Script:activityErrorCount) errors out of $($Script:activityErrorCount + $Script:activitySuccessCount) - $([Math]::Round(($Script:activityErrorCount / ($Script:activityErrorCount + $Script:activitySuccessCount) * 100), 2))%"
 }
 if (($notebookErrorCount + $notebookSuccessCount) -eq 0)
 {
-    Write-Output "Notebooks      : no notebooks found"
+    Write-Output "Notebooks       : no notebooks found"
 }
 else
 {
-    Write-Output "Notebooks      : $($Script:notebookErrorCount) errors out of $($Script:notebookErrorCount + $Script:notebookSuccessCount) - $([Math]::Round(($Script:notebookErrorCount / ($Script:notebookErrorCount + $Script:notebookSuccessCount) * 100), 2))%"
+    Write-Output "Notebooks       : $($Script:notebookErrorCount) errors out of $($Script:notebookErrorCount + $Script:notebookSuccessCount) - $([Math]::Round(($Script:notebookErrorCount / ($Script:notebookErrorCount + $Script:notebookSuccessCount) * 100), 2))%"
 }
 if (($linkedServiceErrorCount + $linkedServiceSuccessCount) -eq 0)
 {
-    Write-Output "LinkedServices : no linked services found" # should not occur since there are two by default that cannot be deleted
+    Write-Output "LinkedServices  : no linked services found" # should not occur since there are two by default that cannot be deleted
 }
 else
 {
-    Write-Output "LinkedServices : $($Script:linkedServiceErrorCount) errors out of $($Script:linkedServiceErrorCount + $Script:linkedServiceSuccessCount) - $([Math]::Round(($Script:linkedServiceErrorCount / ($Script:linkedServiceErrorCount + $Script:linkedServiceSuccessCount) * 100), 2))%"
+    Write-Output "LinkedServices  : $($Script:linkedServiceErrorCount) errors out of $($Script:linkedServiceErrorCount + $Script:linkedServiceSuccessCount) - $([Math]::Round(($Script:linkedServiceErrorCount / ($Script:linkedServiceErrorCount + $Script:linkedServiceSuccessCount) * 100), 2))%"
 }
 if (($datasetErrorCount + $datasetSuccessCount) -eq 0)
 {
-    Write-Output "Datasets       : no datasets found"
+    Write-Output "Datasets        : no datasets found"
 }
 else
 {
-    Write-Output "Datasets       : $($Script:datasetErrorCount) errors out of $($Script:datasetErrorCount + $Script:datasetSuccessCount) - $([Math]::Round(($Script:datasetErrorCount / ($Script:datasetErrorCount + $Script:datasetSuccessCount) * 100), 2))%"
+    Write-Output "Datasets        : $($Script:datasetErrorCount) errors out of $($Script:datasetErrorCount + $Script:datasetSuccessCount) - $([Math]::Round(($Script:datasetErrorCount / ($Script:datasetErrorCount + $Script:datasetSuccessCount) * 100), 2))%"
 }
 if (($triggerErrorCount + $triggerSuccessCount) -eq 0)
 {
-    Write-Output "Triggers       : no triggers found"
+    Write-Output "Triggers        : no triggers found"
 }
 else
 {
-    Write-Output "Triggers       : $($Script:triggerErrorCount) errors out of $($Script:triggerErrorCount + $Script:triggerSuccessCount) - $([Math]::Round(($Script:triggerErrorCount / ($Script:triggerErrorCount + $Script:triggerSuccessCount) * 100), 2))%"
+    Write-Output "Triggers        : $($Script:triggerErrorCount) errors out of $($Script:triggerErrorCount + $Script:triggerSuccessCount) - $([Math]::Round(($Script:triggerErrorCount / ($Script:triggerErrorCount + $Script:triggerSuccessCount) * 100), 2))%"
 }
 if (($dataflowErrorCount + $dataflowSuccessCount) -eq 0)
 {
-    Write-Output "Dataflows      : no dataflows found"
+    Write-Output "Dataflows       : no dataflows found"
 }
 else
 {
-    Write-Output "Dataflows      : $($Script:dataflowErrorCount) errors out of $($Script:dataflowErrorCount + $Script:dataflowSuccessCount) - $([Math]::Round(($Script:dataflowErrorCount / ($Script:dataflowErrorCount + $Script:dataflowSuccessCount) * 100), 2))%"
+    Write-Output "Dataflows       : $($Script:dataflowErrorCount) errors out of $($Script:dataflowErrorCount + $Script:dataflowSuccessCount) - $([Math]::Round(($Script:dataflowErrorCount / ($Script:dataflowErrorCount + $Script:dataflowSuccessCount) * 100), 2))%"
 }
 if (($sqlscriptErrorCount + $sqlscriptSuccessCount) -eq 0)
 {
-    Write-Output "SQLScripts     : no sql scripts found"
+    Write-Output "SQLScripts      : no sql scripts found"
 }
 else
 {
-    Write-Output "SQLScripts     : $($Script:sqlscriptErrorCount) errors out of $($Script:sqlscriptErrorCount + $Script:sqlscriptSuccessCount) - $([Math]::Round(($Script:sqlscriptErrorCount / ($Script:sqlscriptErrorCount + $Script:sqlscriptSuccessCount) * 100), 2))%"
+    Write-Output "SQLScripts      : $($Script:sqlscriptErrorCount) errors out of $($Script:sqlscriptErrorCount + $Script:sqlscriptSuccessCount) - $([Math]::Round(($Script:sqlscriptErrorCount / ($Script:sqlscriptErrorCount + $Script:sqlscriptSuccessCount) * 100), 2))%"
 }
 if (($kqlscriptErrorCount + $kqlscriptSuccessCount) -eq 0)
 {
-    Write-Output "KQLScripts     : no kql scripts found"
+    Write-Output "KQLScripts      : no kql scripts found"
 }
 else
 {
-    Write-Output "KQLScripts     : $($Script:kqlscriptErrorCount) errors out of $($Script:kqlscriptErrorCount + $Script:kqlscriptSuccessCount) - $([Math]::Round(($Script:kqlscriptErrorCount / ($Script:kqlscriptErrorCount + $Script:kqlscriptSuccessCount) * 100), 2))%"
+    Write-Output "KQLScripts      : $($Script:kqlscriptErrorCount) errors out of $($Script:kqlscriptErrorCount + $Script:kqlscriptSuccessCount) - $([Math]::Round(($Script:kqlscriptErrorCount / ($Script:kqlscriptErrorCount + $Script:kqlscriptSuccessCount) * 100), 2))%"
 }
-Write-Output "=============================================================================================="
-if (($pipelineErrorCount + $activityErrorCount + $notebookErrorCount + $linkedServiceErrorCount + $datasetErrorCount + $triggerErrorCount + $dataflowErrorCount + $sqlscriptErrorCount + $kqlscriptErrorCount) -gt 0)
+if ($invalidPostfixErrorCount -eq 0)
 {
-    Write-Output "Number of errors found $($pipelineErrorCount + $activityErrorCount + $notebookErrorCount + $linkedServiceErrorCount + $datasetErrorCount + $triggerErrorCount + $dataflowErrorCount + $sqlscriptErrorCount + $kqlscriptErrorCount)"
+    Write-Output "Invalid Postfix : no incorrect suffixes found"
+}
+else
+{
+    Write-Output "Invalid Postfix : $($Script:invalidPostfixErrorCount) errors out of $($Script:invalidPostfixErrorCount + $Script:invalidPostfixSuccessCount) - $([Math]::Round(($Script:invalidPostfixErrorCount / ($Script:invalidPostfixErrorCount + $Script:invalidPostfixSuccessCount) * 100), 2))%"
+}
+
+Write-Output "=============================================================================================="
+if (($pipelineErrorCount + $activityErrorCount + $notebookErrorCount + $linkedServiceErrorCount + $datasetErrorCount + $triggerErrorCount + $dataflowErrorCount + $sqlscriptErrorCount + $kqlscriptErrorCount + $invalidPostfixErrorCount) -gt 0)
+{
+    Write-Output "Number of errors found $($pipelineErrorCount + $activityErrorCount + $notebookErrorCount + $linkedServiceErrorCount + $datasetErrorCount + $triggerErrorCount + $dataflowErrorCount + $sqlscriptErrorCount + $kqlscriptErrorCount + $invalidPostfixErrorCount)"
     Write-Output "=============================================================================================="
 
     # Make sure DevOps knows the script failed
