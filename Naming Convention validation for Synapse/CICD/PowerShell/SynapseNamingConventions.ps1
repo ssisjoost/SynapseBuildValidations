@@ -18,13 +18,21 @@ Param(
    [ValidateNotNullOrEmpty()]
    [Alias("NamingConventionFilePath","NamingConventionJsonFilePath")]
    [string]
-   $NamingConventionPath
+   $NamingConventionPath,
+
+   [Parameter(Mandatory=$true,
+   HelpMessage="Include the check for Resource suffixes (checks for _copy suffixes).")]
+   [ValidateNotNullOrEmpty()]
+   [Alias("CheckResourceSuffix","ResourceSuffix")]
+   [bool]
+   $CheckResourceSuffixes
 )
 
 $ErrorActionPreference = "Stop"
 #####################################################
 # Variables for counting errors
 #####################################################
+[int]$Script:suffixErrorCount = 0
 [int]$Script:pipelineErrorCount = 0
 [int]$Script:pipelineSuccessCount = 0
 [int]$Script:activityErrorCount = 0
@@ -53,13 +61,13 @@ if (Test-Path $ArtifactPath)
     # Folder exists, but is it the root of Synapse?
     if (-not (Test-Path (Join-Path $ArtifactPath "linkedService")))
     {
-        Write-Error "Supplied Actifact Path exists, but does not contain a subfolder linkedService."
+        Write-Error "Supplied Artifact Path exists, but does not contain a subfolder linkedService."
     }
 }
 else
 {
     # Folder does not exist
-    Write-Error "Supplied Actifact Path doesn't exists! $ArtifactPath"
+    Write-Error "Supplied Artifact Path doesn't exists! $ArtifactPath"
 }
 
 # Check Naming Convention path and load content into memory
@@ -139,7 +147,7 @@ function LoopActivities
                             -LevelNumber $LevelNumber
 
 
-        # Loop through child activties in Foreach and Until
+        # Loop through child activities in Foreach and Until
         if ($activity.type -eq "ForEach" -or $activity.type -eq "Until")
         {
             LoopActivities  -LevelName ($LevelName + "\" + $activity.name) `
@@ -147,7 +155,7 @@ function LoopActivities
                             -Activities $activity.typeProperties.activities
         }
 
-        # Loop through child activties in Switch
+        # Loop through child activities in Switch
         if ($activity.type -eq "Switch")
         {
             # Loop through default Activities
@@ -164,7 +172,7 @@ function LoopActivities
             }
         }
 
-        # Loop through child activties in IfCondition
+        # Loop through child activities in IfCondition
         if ($Activity.type -eq "IfCondition")
         {
             # Loop through true activities
@@ -322,9 +330,28 @@ function CheckDatasetServicePrefix
 # END Functions
 #####################################################
 
+#####################################################
+# CHECK ALL RESOURCE SUFFIXES
+#####################################################
 
+if ($CheckResourceSuffixes -eq $true) {
+    # Assign all resources to the resources variable while checking on the _copy suffix
+    $resources = Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Where-Object { $_.BaseName -match '_copy([1-9][0-9]?|99)$'} | Select-Object -Property FullName, BaseName
 
-# Retrieve naming separator from naming covention config
+    # Notify when there are resources with the _copy suffix
+    if ($null -ne $resources){
+        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Found resources with the _copy suffix"
+    } else {
+        Write-Output "$([char]10003) Found no resources with the _copy suffix"
+    }
+
+    # Count each resource in the resources variable
+    foreach ($resource in $resources.BaseName)
+    {    
+        $Script:suffixErrorCount++
+    }
+}
+# Retrieve naming separator from naming convention config
 [string]$namingSeparator = $namingConvention.NamingSeparator
 
 #####################################################
@@ -771,6 +798,14 @@ Write-Output "==================================================================
 Write-Output "Summary"
 Write-Output "=============================================================================================="
 
+if ($suffixErrorCount -eq 0)
+{
+    Write-Output "Suffixes       : no incorrect suffixes found"
+}
+else
+{
+    Write-Output "Suffixes       : $($Script:suffixErrorCount) _copy suffix related errors in the artifact"
+}
 if (($pipelineErrorCount + $pipelineSuccessCount) -eq 0)
 {
     Write-Output "Pipelines      : no pipelines found"
