@@ -772,9 +772,10 @@ else
 #####################################################
 # CHECK ALL RESOURCE SUFFIXES
 #####################################################
-[bool]$CheckResourceSuffixes = $true
+# Retrieve all checks from naming covention config, then filter on Postfixes to get its validate value
+[bool]$CheckPostfixes = ($namingConvention.Checks | Where-Object { $_.Type -eq "Postfixes" }).validate
 
-if ($CheckResourceSuffixes -eq $true) {
+if ($CheckPostfixes) {
     # Assign all resources to the resources variable while checking on the _copy suffix
     $incorrectResources = Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Where-Object { $_.BaseName -match '_copy([1-9][0-9]?)$'} | Select-Object -Property FullName, BaseName
 
@@ -790,7 +791,6 @@ if ($CheckResourceSuffixes -eq $true) {
     {
         Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Found $((Get-Item $resource.FullName).Directory.Name) resource [$($resource.BaseName)] with the _copy postfix"
     }
-
 }
 
 
@@ -798,7 +798,6 @@ Write-Output ""
 Write-Output "=============================================================================================="
 Write-Output "Summary"
 Write-Output "=============================================================================================="
-
 
 if (($pipelineErrorCount + $pipelineSuccessCount) -eq 0)
 {
