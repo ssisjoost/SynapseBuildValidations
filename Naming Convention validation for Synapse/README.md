@@ -12,7 +12,8 @@ Suggestions for further improvements are below. Please suggest your own.
 - [ ] Option to allow a certain percentage of errors before failing the validation
 - [ ] Option to only show the mistakes and ignore everything that is correct
 - [ ] Take Linked Service into consideration to determine Data Set names
-- [ ] Look for items ending on _copy1 or _copy2
+- [x] Look for items ending on _copy1 or _copy2 on resource level
+- [x] Look for items ending on _copy1 or _copy2 on activity level
 - [ ] Look for bad defaults settings like the 7 day timeout
 - [ ] Look empty descriptions
 - [ ] Make it available for ADF
@@ -28,3 +29,4 @@ Suggestions for further improvements are below. Please suggest your own.
 - 0.06 - Include types for naming conventions for Linked Service and Datasets prefixes
 - 0.07 - Check Notebook, SQL Script and KQL Script prefixes
 - 0.08 - Adding ValidateNamingConventions.yml file to create DevOps pipeline
+- 0.09 - Adding _copy check on resource level
