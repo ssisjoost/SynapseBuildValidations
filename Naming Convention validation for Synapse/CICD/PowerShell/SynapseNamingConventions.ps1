@@ -770,30 +770,29 @@ else
 
 
 #####################################################
-# CHECK ALL RESOURCE SUFFIXES
+# CHECK ALL RESOURCE POSTFIXES
 #####################################################
-# Retrieve all checks from naming covention config, then filter on Postfixes to get its validate value
-[bool]$CheckPostfixes = ($namingConvention.Checks | Where-Object { $_.Type -eq "Postfixes" }).validate
+# Assign all resources to the resources variable while checking on the _copy** postfixe
+$incorrectResources = Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Where-Object { $_.BaseName -match '_copy([1-9][0-9]?)$'} | Select-Object -Property FullName, BaseName
 
-if ($CheckPostfixes) {
-    # Assign all resources to the resources variable while checking on the _copy suffix
-    $incorrectResources = Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Where-Object { $_.BaseName -match '_copy([1-9][0-9]?)$'} | Select-Object -Property FullName, BaseName
+# Count errors and succeeds
+[int]$Script:invalidPostfixErrorCount = ($incorrectResources | Measure-Object).Count
+[int]$Script:invalidPostfixSuccessCount = (Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Measure-Object).Count - ($incorrectResources | Measure-Object).Count
 
-    [int]$Script:invalidPostfixErrorCount = ($incorrectResources | Measure-Object).Count
-    [int]$Script:invalidPostfixSuccessCount = (Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Measure-Object).Count - ($incorrectResources | Measure-Object).Count
-
-    Write-Output ""
-    Write-Output "=============================================================================================="
-    Write-Output "Invalid postfixes $(($incorrectResources | Measure-Object).Count)"
-    Write-Output "=============================================================================================="
-    # Loop through all resources with an invalid _copy* postfix
-    foreach ($resource in $incorrectResources)
-    {
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Found $((Get-Item $resource.FullName).Directory.Name) resource [$($resource.BaseName)] with the _copy postfix"
-    }
+Write-Output ""
+Write-Output "=============================================================================================="
+Write-Output "Invalid postfixes $(($incorrectResources | Measure-Object).Count)"
+Write-Output "=============================================================================================="
+# Loop through all resources with an invalid _copy* postfix
+foreach ($resource in $incorrectResources)
+{
+    # Write all 'errors' to screen
+    Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Found $((Get-Item $resource.FullName).Directory.Name) resource [$($resource.BaseName)] with the _copy postfix"
 }
 
-
+#####################################################
+# SUMMARY
+#####################################################
 Write-Output ""
 Write-Output "=============================================================================================="
 Write-Output "Summary"
@@ -873,7 +872,7 @@ else
 }
 if ($invalidPostfixErrorCount -eq 0)
 {
-    Write-Output "Invalid Postfix : no incorrect suffixes found"
+    Write-Output "Invalid Postfix : no incorrect postfixes found"
 }
 else
 {
