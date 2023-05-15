@@ -13,7 +13,7 @@ Suggestions for further improvements are below. Please suggest your own.
 - [ ] Option to only show the mistakes and ignore everything that is correct
 - [ ] Take Linked Service into consideration to determine Data Set names
 - [x] Look for items ending on _copy1 or _copy2 on resource level
-- [x] Look for items ending on _copy1 or _copy2 on activity level
+- [ ] Look for items ending on _copy1 or _copy2 on activity level
 - [ ] Look for bad defaults settings like the 7 day timeout
 - [ ] Look empty descriptions
 - [ ] Make it available for ADF
