@@ -1,4 +1,16 @@
 {
+"Checks": [
+		{"type":"Postfixes",	"validate":true},
+		{"type":"Pipeline",		"validate":true},
+		{"type":"Dataset", 		"validate":true},
+		{"type":"LinkedService","validate":true},
+		{"type":"Notebook",		"validate":true},
+		{"type":"Trigger",		"validate":true},
+		{"type":"SqlScript",	"validate":true},
+		{"type":"KqlScript",	"validate":true},
+		{"type":"Dataflow",		"validate":true},
+		{"type":"Activities",	"validate":true}
+	],
 "Prefixes": [
 	    {"type":"Pipeline",			"prefix":"PL"},
 	    {"type":"Dataset",			"prefix":"DS"},
