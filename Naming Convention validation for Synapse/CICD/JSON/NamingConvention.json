@@ -7,9 +7,9 @@
 		{"type":"Notebook",		"validate":true},
 		{"type":"Trigger",		"validate":true},
 		{"type":"SqlScript",	"validate":true},
-		{"type":"KqlScript",	"validate":true},
+		{"type":"KqlScript",	"validate":false},
 		{"type":"Dataflow",		"validate":true},
-		{"type":"Activities",	"validate":true}
+		{"type":"Activity",		"validate":true}
 	],
 "Prefixes": [
 	    {"type":"Pipeline",			"prefix":"PL"},
