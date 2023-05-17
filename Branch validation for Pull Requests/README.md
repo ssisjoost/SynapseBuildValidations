@@ -4,6 +4,7 @@ Validating source and target branches to avoid accidentily skipping branches bec
 ## TODO
 Suggestions for further improvements are below. Please suggest your own.
 - [ ] Naming convention check for Feature branches
+- [ ] Implement support for release strategies that use a branch for each release, for example: release/v1.0, release/v1.1...)
 
 ## Versions
 - 0.01 - Intial version
