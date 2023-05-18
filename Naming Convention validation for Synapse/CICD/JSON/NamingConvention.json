@@ -1,25 +1,25 @@
 {
 "Checks": [
-		{"type":"Postfixes",	"validate":true},
 		{"type":"Pipeline",		"validate":true},
-		{"type":"Dataset", 		"validate":true},
-		{"type":"LinkedService","validate":true},
+		{"type":"Activity",		"validate":true},
 		{"type":"Notebook",		"validate":true},
+		{"type":"LinkedService","validate":true},
+		{"type":"Dataset", 		"validate":true},
 		{"type":"Trigger",		"validate":true},
-		{"type":"SqlScript",	"validate":true},
-		{"type":"KqlScript",	"validate":false},
 		{"type":"Dataflow",		"validate":true},
-		{"type":"Activity",		"validate":true}
+		{"type":"SqlScript",	"validate":true},
+		{"type":"KqlScript",	"validate":true},
+		{"type":"Postfixes",	"validate":true}
 	],
 "Prefixes": [
 	    {"type":"Pipeline",			"prefix":"PL"},
-	    {"type":"Dataset",			"prefix":"DS"},
-		{"type":"LinkedService",	"prefix":"LS"},
 	    {"type":"Notebook",			"prefix":"NB"},
+		{"type":"LinkedService",	"prefix":"LS"},
+		{"type":"Dataset",			"prefix":"DS"},
 		{"type":"Trigger",			"prefix":"TR"},
+		{"type":"Dataflow",			"prefix":"DF"},
 		{"type":"SqlScript",		"prefix":"SQL"},
-		{"type":"KqlScript",		"prefix":"KQL"},
-		{"type":"Dataflow",			"prefix":"DF"}
+		{"type":"KqlScript",		"prefix":"KQL"}
 ],
 "Activities": [
 	    {"type":"WebActivity",		"prefix":"WEB"},
