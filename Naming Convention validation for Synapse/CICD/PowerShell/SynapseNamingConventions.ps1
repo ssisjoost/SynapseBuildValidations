@@ -131,9 +131,30 @@ function LoopActivities
         [PSObject]$Activities
     )
 
+#    # Retrieve all checks from naming covention config and then filter on Postfixes to get its validate value
+#    [bool]$postfixCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Postfixes" }).validate
+#
+#    if ($postfixCheck)
+#    {
+#        # Assign all resources to the resources variable while checking on the _copy** postfixe
+#        $incorrectActivities = $Activities | Where-Object { $_.name -match '_copy([1-9][0-9]?)$'} | Select-Object -Property name, type
+#
+#        # Count errors and succeeds
+#        [int]$Script:invalidPostfixErrorCount += ($incorrectActivities | Measure-Object).Count
+#        [int]$Script:invalidPostfixSuccessCount += ($Activities | Measure-Object).Count - ($incorrectResources | Measure-Object).Count
+#
+#        # Loop through all activities with an invalid _copy* postfix
+#        foreach ($incorrectActivity in $incorrectActivities)
+#        {
+#            # Write all 'errors' to screen
+#            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Activity [$($incorrectActivity.name)] has the incorrect postfix _copy"
+#        }
+#    }
+
     # Loop through the activities
     foreach ($activity in $Activities)
     {
+
         # Check the prefix of the activity
         CheckActivityPrefix -ActivityName $Activity.name `
                             -ActivityType $Activity.type `
@@ -904,8 +925,8 @@ if ($postfixCheck)
     $incorrectResources = Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Where-Object { $_.BaseName -match '_copy([1-9][0-9]?)$'} | Select-Object -Property FullName, BaseName
 
     # Count errors and succeeds
-    [int]$Script:invalidPostfixErrorCount = ($incorrectResources | Measure-Object).Count
-    [int]$Script:invalidPostfixSuccessCount = (Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Measure-Object).Count - ($incorrectResources | Measure-Object).Count
+    [int]$Script:invalidPostfixErrorCount += ($incorrectResources | Measure-Object).Count
+    [int]$Script:invalidPostfixSuccessCount += (Get-ChildItem -Path $ArtifactPath -Recurse -Filter *.json | Measure-Object).Count - ($incorrectResources | Measure-Object).Count
 
     Write-Output ""
     Write-Output "=============================================================================================="
