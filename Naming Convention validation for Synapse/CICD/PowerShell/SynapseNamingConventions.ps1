@@ -382,7 +382,8 @@ function LogSummary
 [bool]$pipelineCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Pipeline" }).validate
 [bool]$activityCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Activity" }).validate
 
-if ((Test-Path (Join-Path $ArtifactPath "pipeline")) -and ($pipelineCheck))
+# Check if there are pipelines and check if pipelines or activities need to be validated
+if ((Test-Path (Join-Path $ArtifactPath "pipeline")) -and (($pipelineCheck) -or ($activityCheck)))
 {
     # Retrieve pipeline prefix
     $pipelineConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "Pipeline" }
@@ -409,18 +410,21 @@ if ((Test-Path (Join-Path $ArtifactPath "pipeline")) -and ($pipelineCheck))
         Write-Output "=============================================================================================="
         Write-Output "Checking pipeline [$($pipelinePath)$($pipeline.BaseName)]"
         Write-Output "=============================================================================================="
-        # Check Pipeline name prefix
-        if(!$pipeline.BaseName.StartsWith($pipelineConvention.prefix + $namingSeparator))
+        # Check if the pipelines need to validated
+        if ($pipelineCheck)
         {
-            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Pipeline prefix is not equals [$($pipelineConvention.prefix)$($namingSeparator)] for [$($pipeline.BaseName)]"
-            $Script:pipelineErrorCount++
+            # Check Pipeline name prefix
+            if(!$pipeline.BaseName.StartsWith($pipelineConvention.prefix + $namingSeparator))
+            {
+                Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Pipeline prefix is not equals [$($pipelineConvention.prefix)$($namingSeparator)] for [$($pipeline.BaseName)]"
+                $Script:pipelineErrorCount++
+            }
+            else
+            {
+                Write-Output "$([char]10003) Pipeline prefix is correct"
+                $Script:pipelineSuccessCount++
+            }
         }
-        else
-        {
-            Write-Output "$([char]10003) Pipeline prefix is correct"
-            $Script:pipelineSuccessCount++
-        }
-
         #####################################################
         # ACTIVITIES
         #####################################################
