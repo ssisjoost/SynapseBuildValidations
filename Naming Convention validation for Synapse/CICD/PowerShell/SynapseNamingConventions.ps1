@@ -131,25 +131,25 @@ function LoopActivities
         [PSObject]$Activities
     )
 
-#    # Retrieve all checks from naming covention config and then filter on Postfixes to get its validate value
-#    [bool]$postfixCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Postfixes" }).validate
-#
-#    if ($postfixCheck)
-#    {
-#        # Assign all resources to the resources variable while checking on the _copy** postfixe
-#        $incorrectActivities = $Activities | Where-Object { $_.name -match '_copy([1-9][0-9]?)$'} | Select-Object -Property name, type
-#
-#        # Count errors and succeeds
-#        [int]$Script:invalidPostfixErrorCount += ($incorrectActivities | Measure-Object).Count
-#        [int]$Script:invalidPostfixSuccessCount += ($Activities | Measure-Object).Count - ($incorrectResources | Measure-Object).Count
-#
-#        # Loop through all activities with an invalid _copy* postfix
-#        foreach ($incorrectActivity in $incorrectActivities)
-#        {
-#            # Write all 'errors' to screen
-#            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Activity [$($incorrectActivity.name)] has the incorrect postfix _copy"
-#        }
-#    }
+    # Retrieve all checks from naming covention config and then filter on Postfixes to get its validate value
+    [bool]$postfixCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Postfixes" }).validate
+
+    if ($postfixCheck)
+    {
+        # Assign all resources to the resources variable while checking on the _copy** postfixe
+        $incorrectActivities = $Activities | Where-Object { $_.name -match '_copy([1-9][0-9]?)$'} | Select-Object -Property name, type
+
+        # Count errors and succeeds
+        [int]$Script:invalidPostfixErrorCount += ($incorrectActivities | Measure-Object).Count
+        [int]$Script:invalidPostfixSuccessCount += ($Activities | Measure-Object).Count - ($incorrectActivities | Measure-Object).Count
+
+        # Loop through all activities with an invalid _copy* postfix
+        foreach ($incorrectActivity in $incorrectActivities)
+        {
+            # Write all 'errors' to screen
+            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Activity [$($incorrectActivity.name)] has a _copy postfix"
+        }
+    }
 
     # Loop through the activities
     foreach ($activity in $Activities)
@@ -429,7 +429,7 @@ if ((Test-Path (Join-Path $ArtifactPath "pipeline")) -and (($pipelineCheck) -or 
         # Pipeline loggin
         Write-Output ""
         Write-Output "=============================================================================================="
-        Write-Output "Checking pipeline [$($pipelinePath)$($pipeline.BaseName)]"
+        Write-Output "Checking $(if(!$pipelineCheck -and $activityCheck) {"activities of "})pipeline [$($pipelinePath)$($pipeline.BaseName)]"
         Write-Output "=============================================================================================="
         # Check if the pipelines need to validated
         if ($pipelineCheck)
@@ -445,6 +445,10 @@ if ((Test-Path (Join-Path $ArtifactPath "pipeline")) -and (($pipelineCheck) -or 
                 Write-Output "$([char]10003) Pipeline prefix is correct"
                 $Script:pipelineSuccessCount++
             }
+        }
+        else
+        {
+            Write-Output "Pipeline check disabled"
         }
         #####################################################
         # ACTIVITIES
@@ -465,9 +469,9 @@ else
 {
     Write-Output ""
     Write-Output "=============================================================================================="
-    if (!$pipelineCheck)
+    if (!$pipelineCheck -and !$activityCheck)
     {
-        Write-Output "Pipeline check disabled"
+        Write-Output "Pipeline and activity check disabled"
     }
     elseif (-not (Test-Path (Join-Path $ArtifactPath "pipeline")))
     {
@@ -936,7 +940,7 @@ if ($postfixCheck)
     foreach ($resource in $incorrectResources)
     {
         # Write all 'errors' to screen
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Found $((Get-Item $resource.FullName).Directory.Name) resource [$($resource.BaseName)] with the _copy postfix"
+        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) $((Get-Item $resource.FullName).Directory.Name) resource [$($resource.BaseName)] has a _copy postfix"
     }
 }
 
