@@ -21,7 +21,7 @@ Param(
    $NamingConventionPath
 )
 
-$ErrorActionPreference = "Stop"
+#$ErrorActionPreference = "Stop"
 #####################################################
 # Variables for counting errors
 #####################################################
@@ -147,7 +147,7 @@ function LoopActivities
         foreach ($incorrectActivity in $incorrectActivities)
         {
             # Write all 'errors' to screen
-            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Activity [$($incorrectActivity.name)] has a _copy postfix"
+            Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Activity [$($incorrectActivity.name)] has a _copy postfix"
         }
     }
 
@@ -241,7 +241,7 @@ function CheckActivityPrefix
     # Check if there is a prefix available
     if (!$activityConvention)
     {
-        Write-Host "##vso[task.LogIssue type=error;]$($spaces)$([char]10007) Activity [$($ActivityName)] has unknown activity type [$($ActivityType)]"
+        Write-Error "##vso[task.LogIssue type=error;]$($spaces)$([char]10007) Activity [$($ActivityName)] has unknown activity type [$($ActivityType)]"
         $Script:activityErrorCount++
     }
     # Check if the used prefix is correct
@@ -252,7 +252,7 @@ function CheckActivityPrefix
     }
     else
     {
-        Write-Host "##vso[task.LogIssue type=error;]$($spaces)$([char]10007) Activity [$($ActivityName)] has an incorrect prefix [$($activityConvention.prefix)$($namingSeparator)] for a [$($ActivityType)]"
+        Write-Error "##vso[task.LogIssue type=error;]$($spaces)$([char]10007) Activity [$($ActivityName)] has an incorrect prefix [$($activityConvention.prefix)$($namingSeparator)] for a [$($ActivityType)]"
         $Script:activityErrorCount++
     }
 }
@@ -281,7 +281,7 @@ function CheckLinkedServicePrefix
 
     if (!$linkedServiceConvention)
     {
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Linked Services [$($LinkedServiceName)] has unknown Linked Services type [$($LinkedServiceType)] "
+        Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Linked Services [$($LinkedServiceName)] has unknown Linked Services type [$($LinkedServiceType)] "
         $Script:linkedServiceErrorCount++
     }
     elseif ($LinkedServiceName.StartsWith($LinkedServicePrefix + $namingSeparator + $linkedServiceConvention.Prefix + $namingSeparator))
@@ -291,11 +291,10 @@ function CheckLinkedServicePrefix
     }
     else
     {
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Linked Services [$($LinkedServiceName)] has the incorrect prefix [$($LinkedServicePrefix)$($namingSeparator)$($linkedServiceConvention.Prefix)$($namingSeparator)] for a [$($LinkedServiceType)]"
+        Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Linked Services [$($LinkedServiceName)] has the incorrect prefix [$($LinkedServicePrefix)$($namingSeparator)$($linkedServiceConvention.Prefix)$($namingSeparator)] for a [$($LinkedServiceType)]"
         $Script:linkedServiceErrorCount++
     }
 }
-
 
 function CheckDatasetServicePrefix
 {
@@ -322,7 +321,7 @@ function CheckDatasetServicePrefix
 
     if (!$datasetConvention)
     {
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Dataset [$($DatasetName)] has unknown dataset type [$($DatasetType)]"
+        Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Dataset [$($DatasetName)] has unknown dataset type [$($DatasetType)]"
         $Script:datasetErrorCount++
     }
     elseif (
@@ -335,19 +334,8 @@ function CheckDatasetServicePrefix
     }
     else
     {
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Dataset [$($DatasetName)] has the incorrect prefix [$($DatasetPrefix)$($namingSeparator)$($datasetConvention.Prefix)$($namingSeparator)] for a [$($DatasetType)]"
+        Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Dataset [$($DatasetName)] has the incorrect prefix [$($DatasetPrefix)$($namingSeparator)$($datasetConvention.Prefix)$($namingSeparator)] for a [$($DatasetType)]"
         $Script:datasetErrorCount++
-    }
-}
-
-function CheckPipelinePrefix ($pipeline) 
-{
-    if(!$pipeline.BaseName.StartsWith($pipelineConvention.prefix + $namingSeparator)) {
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Pipeline prefix is not equals [$($pipelineConvention.prefix)$($namingSeparator)] for [$($pipeline.BaseName)]"
-        $Script:pipelineErrorCount++
-    } else {
-        Write-Output "$([char]10003) Pipeline prefix is correct"
-        $Script:pipelineSuccessCount++
     }
 }
 
@@ -412,27 +400,23 @@ function LogSummary
 [bool]$pipelineCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Pipeline" }).validate
 [bool]$activityCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Activity" }).validate
 
+#Define variable for pipeline directory
+$pipelineDirectory = Join-Path $ArtifactPath "pipeline"
+
 # Check if there are pipelines and if pipelines or activities need to be validated
-if ((Test-Path (Join-Path $ArtifactPath "pipeline")) -and ($pipelineCheck -or $activityCheck))
+if ((Test-Path $pipelineDirectory) -and ($pipelineCheck -or $activityCheck))
 {
     # Retrieve pipeline prefix
     $pipelineConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "Pipeline" }
 
     # Retrieve all pipeline files
-    $artifactPipelines = Get-ChildItem -Path (Join-Path $ArtifactPath "pipeline") -Filter *.json | Select-Object -Property FullName, BaseName
+    $artifactPipelines = Get-ChildItem -Path $pipelineDirectory -Filter *.json | Select-Object -Property FullName, BaseName
 
     # Loop through each pipeline file
-    foreach ($pipeline in $artifactPipelines) {
-        try 
-        {
-            # Read file content to retrieve pipeline JSON
-            $pipelineContent = Get-Content $pipeline.FullName | Out-String | ConvertFrom-Json
-        } 
-        catch 
-        {
-            Write-Error "Failed to parse JSON content of pipeline: $($pipeline.FullName)"
-            continue
-        }
+    foreach ($pipeline in $artifactPipelines)
+    {
+        # Read file content to retrieve pipeline JSON
+        $pipelineContent = Get-Content $pipeline.FullName | Out-String | ConvertFrom-Json
 
         # Determine pipeline path within the Synapse Workspace for (showing only)
         $pipelinePath = "\"
@@ -441,46 +425,57 @@ if ((Test-Path (Join-Path $ArtifactPath "pipeline")) -and ($pipelineCheck -or $a
             $pipelinePath = $pipelinePath + $pipelineContent.properties.folder.name.replace("/","\") + "\"
         }
         
-        # Logging
-        Write-Output ""
-        Write-Output "=============================================================================================="
-        Write-Output "Checking $(if(!$pipelineCheck -and $activityCheck) {"activities of "})pipeline [$($pipelinePath)$($pipeline.BaseName)]"
-        Write-Output "=============================================================================================="
+        # Pipeline logging
+        Write-Output "",
+            "==============================================================================================",
+            "Checking $(if(!$pipelineCheck -and $activityCheck) {"activities of "})Pipeline [$($pipelinePath)$($pipeline.BaseName)]",
+            "=============================================================================================="
+        
         # Check if the pipelines need to be validated
-        if ($pipelineCheck) 
+        if ($pipelineCheck)
         {
-            CheckPipelinePrefix $pipeline
-        } 
-        else 
+            # Check Pipeline name prefix
+            if(!$pipeline.BaseName.StartsWith($pipelineConvention.prefix + $namingSeparator))
+            {
+                Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Pipeline prefix is not equals [$($pipelineConvention.prefix)$($namingSeparator)] for [$($pipeline.BaseName)]"
+                $Script:pipelineErrorCount++
+            }
+            else
+            {
+                Write-Output "$([char]10003) Pipeline prefix is correct"
+                $Script:pipelineSuccessCount++
+            }
+        }
+        else
         {
             Write-Output "Pipeline check disabled"
         }
         #####################################################
         # ACTIVITIES
         #####################################################
-        if ($activityCheck) 
+        if ($activityCheck)
         {
             LoopActivities  -LevelName $pipeline.BaseName `
                             -LevelNumber 1 `
                             -Activities $pipelineContent.properties.activities
-        } 
-        else 
+        }
+        else
         {
             Write-Output "Activity check disabled"
         }
     }
-} 
-else 
+}
+else
 {
-    Write-Output ""
-    Write-Output "=============================================================================================="
-    if (!$pipelineCheck -and !$activityCheck) 
+    Write-Output "",
+        "=============================================================================================="
+    if (!$pipelineCheck -and !$activityCheck)
     {
         Write-Output "Pipeline and activity check disabled"
-    } 
-    elseif (-not (Test-Path (Join-Path $ArtifactPath "pipeline"))) 
+    }
+    elseif (-not (Test-Path $pipelineDirectory))
     {
-        Write-Output "No pipelines found in artifact"
+        Write-Output "No Pipelines found in artifact"
     }
     Write-Output "=============================================================================================="
 }
@@ -491,13 +486,16 @@ else
 # Retrieve all checks from naming convention config and filter on Notebook to get its validate value
 [bool]$notebookCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Notebook" }).validate
 
-if ((Test-Path (Join-Path $ArtifactPath "notebook")) -and ($notebookCheck))
+#Define variable for notebook directory
+$notebookDirectory = Join-Path $ArtifactPath "notebook"
+
+if ((Test-Path $notebookDirectory) -and ($notebookCheck))
 {
     # Retrieve notebook prefix
     $notebookConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "Notebook" }
 
     # Retrieve all notebook files
-    $artifactNotebooks = Get-ChildItem -Path (Join-Path $ArtifactPath "notebook") -Filter *.json | Select-Object -Property FullName, BaseName
+    $artifactNotebooks = Get-ChildItem -Path $notebookDirectory -Filter *.json | Select-Object -Property FullName, BaseName
     
     # Loop through each notebook file
     foreach ($notebook in $artifactNotebooks)
@@ -506,14 +504,13 @@ if ((Test-Path (Join-Path $ArtifactPath "notebook")) -and ($notebookCheck))
         $notebookContent = Get-Content $notebook.FullName | Out-String | ConvertFrom-Json
 
         # Determine notebook path within the Synapse Workspace
-        $notebookPath = if ((HasProperty -JsonObject $notebookContent.properties -PropertyName "folder")) 
-                        {
-                            "\" + $notebookContent.properties.folder.name.replace("/", "\") + "\"
-                        } 
-                        else 
-                        {
-                            "\"
-                        }
+        $notebookPath = "\"
+
+        # If notebook is not in the root retrieve folder from JSON
+        if (HasProperty -JsonObject $notebookContent.properties -PropertyName "folder")
+        {
+            $notebookPath = $notebookPath + $notebookContent.properties.folder.name.replace("/","\") + "\"
+        }
 
         # Notebook logging
         Write-Output "",
@@ -524,7 +521,7 @@ if ((Test-Path (Join-Path $ArtifactPath "notebook")) -and ($notebookCheck))
         # Check Notebook name prefix
         if(!$notebook.BaseName.StartsWith($notebookConvention.prefix + $namingSeparator))
         {
-            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Notebook prefix is not equals [$($notebookConvention.prefix)$($namingSeparator)] for [$($notebook.BaseName)]"
+            Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Notebook prefix is not equals [$($notebookConvention.prefix)$($namingSeparator)] for [$($notebook.BaseName)]"
             $Script:notebookErrorCount++
         }
         else
@@ -543,13 +540,12 @@ else
     {
         Write-Output "Notebook check disabled"
     }
-    elseif (-not (Test-Path (Join-Path $ArtifactPath "notebook")))
+    elseif (-not (Test-Path $notebookDirectory))
     {
-        Write-Output "No notebooks found in artifact"
+        Write-Output "No Notebooks found in artifact"
     }
     Write-Output "=============================================================================================="
 }
-
 
 #####################################################
 # LINKED SERVICES
@@ -557,33 +553,36 @@ else
 # Retrieve all checks from naming convention config and then filter on LinkedService to get its validate value
 [bool]$linkedServiceCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "LinkedService" }).validate
 
-if ((Test-Path (Join-Path $ArtifactPath "linkedService")) -and ($linkedServiceCheck))
+#Define variable for linked service directory
+$linkedServiceDirectory = Join-Path $ArtifactPath "linkedService"
+
+if ((Test-Path $linkedServiceDirectory) -and ($linkedServiceCheck))
 {
     # Retrieve linked service prefix
     $linkedServiceConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "LinkedService" }
 
     # Retrieve all Linked Service files
-    $artifactLinkedServices = Get-ChildItem -Path (Join-Path $ArtifactPath "linkedService") -Filter *.json | Select-Object -Property FullName, BaseName
+    $artifactLinkedServices = Get-ChildItem -Path $linkedServiceDirectory -Filter *.json | Select-Object -Property FullName, BaseName
 
     # Loop through each linked service file
     foreach ($linkedService in $artifactLinkedServices)
     {
-        # Read file content to retrieve pipeline JSON
+        # Read file content to retrieve linked service JSON
         $linkedServiceContent = Get-Content $linkedService.FullName | Out-String | ConvertFrom-Json
 
-        # Get type of Linked Service
+        # Get type of linked service
         $linkedServiceType = $linkedServiceContent.properties.Type
 
-        # Linked Service logging
+        # Linked service logging
         Write-Output "",
             "==============================================================================================",
             "Checking Linked Service [$($linkedService.BaseName)] of type $($linkedServiceType)",
             "=============================================================================================="
 
-        $linkedServiceName = $linkedService.BaseName
+        # Defining and filtering out default linked services
         $defaultLinkedServiceNames = @(($SynapseDevWorkspaceName + "-WorkspaceDefaultSqlServer"), ($SynapseDevWorkspaceName + "-WorkspaceDefaultStorage"))
         
-        if ($defaultLinkedServiceNames -contains $linkedServiceName)
+        if ($defaultLinkedServiceNames -contains $linkedService.BaseName)
         {
             Write-Output "$([char]10003) Ignoring default Linked Services that cannot be renamed"
             $Script:linkedServiceSuccessCount++
@@ -591,7 +590,7 @@ if ((Test-Path (Join-Path $ArtifactPath "linkedService")) -and ($linkedServiceCh
         else
         {
             # Check Pipeline name prefix
-            CheckLinkedServicePrefix -LinkedServiceName $linkedServiceName `
+            CheckLinkedServicePrefix -LinkedServiceName $linkedService.BaseName `
                                      -LinkedServiceType $linkedServiceType `
                                      -LinkedServicePrefix $linkedServiceConvention.prefix
         }
@@ -603,11 +602,11 @@ else
         "=============================================================================================="
     if (!$linkedServiceCheck)
     {
-        Write-Output "Linked services check disabled"
+        Write-Output "Linked Service check disabled"
     }
-    elseif (-not (Test-Path (Join-Path $ArtifactPath "linkedService")))
+    elseif (-not (Test-Path $linkedServiceDirectory))
     {
-        Write-Output "No linked services found in artifact"
+        Write-Output "No Linked Services found in artifact"
     }
     Write-Output "=============================================================================================="
 }
@@ -618,13 +617,16 @@ else
 # Retrieve all checks from naming convention config and then filter on Datasets to get its validate value
 [bool]$datasetCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Dataset" }).validate
 
-if ((Test-Path (Join-Path $ArtifactPath "dataset")) -and ($datasetCheck))
+#Define variable for dataset directory
+$datasetDirectory = Join-Path $ArtifactPath "dataset"
+
+if ((Test-Path $datasetDirectory) -and ($datasetCheck))
 {
     # Retrieve dataset prefix
     $datasetConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "Dataset" }
 
     # Retrieve dataset files
-    $artifactDatasets = Get-ChildItem -Path (Join-Path $ArtifactPath "dataset") -Filter *.json | Select-Object -Property FullName, BaseName
+    $artifactDatasets = Get-ChildItem -Path $datasetDirectory -Filter *.json | Select-Object -Property FullName, BaseName
 
     # Loop through each dataset file
     foreach ($dataset in $artifactDatasets)
@@ -657,9 +659,9 @@ else
     {
         Write-Output "Dataset check disabled"
     }
-    elseif (-not (Test-Path (Join-Path $ArtifactPath "dataset")))
+    elseif (-not (Test-Path $datasetDirectory))
     {
-        Write-Output "No datasets found in artifact"
+        Write-Output "No Datasets found in artifact"
     }
     Write-Output "=============================================================================================="
 }
@@ -670,7 +672,10 @@ else
 # Retrieve all checks from naming convention config and then filter on Trigger to get its validate value
 [bool]$triggerCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Trigger" }).validate
 
-if ((Test-Path (Join-Path $ArtifactPath "trigger")) -and ($triggerCheck))
+#Define variable for trigger directory
+$triggerDirectory = Join-Path $ArtifactPath "trigger"
+
+if ((Test-Path $triggerDirectory) -and ($triggerCheck))
 {
     # Retrieve trigger prefix
     $triggerConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "trigger" }
@@ -678,25 +683,25 @@ if ((Test-Path (Join-Path $ArtifactPath "trigger")) -and ($triggerCheck))
     # Retrieve allowed trigger postfixes and add separator in front of it
     [String[]]$allowPostFixes = $namingConvention.TriggerPostfixes | ForEach-Object {$namingSeparator + $_}
 
-    # Retrieve all Linked Service files
-    $artifactTriggers = Get-ChildItem -Path (Join-Path $ArtifactPath "trigger") -Filter *.json | Select-Object -Property FullName, BaseName
+    # Retrieve all trigger files
+    $artifactTriggers = Get-ChildItem -Path $triggerDirectory -Filter *.json | Select-Object -Property FullName, BaseName
 
-    # Loop through each Triggers file
+    # Loop through each trigger file
     foreach ($trigger in $artifactTriggers)
     {
         # Initialize count for each trigger
         $triggerSubCount = 0
 
-        # trigger logging
+        # Trigger logging
         Write-Output "",
             "==============================================================================================",
-            "Checking trigger [$($trigger.BaseName)]",
+            "Checking Trigger [$($trigger.BaseName)]",
             "=============================================================================================="
 
         # Check trigger name prefix
         if (!$trigger.BaseName.StartsWith($triggerConvention.prefix + $namingSeparator))
         {
-            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Trigger prefix is not equals [$($triggerConvention.prefix)$($namingSeparator)] for [$($trigger.BaseName)]"
+            Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Trigger prefix is not equals [$($triggerConvention.prefix)$($namingSeparator)] for [$($trigger.BaseName)]"
             $triggerSubCount++
         }
         else
@@ -705,12 +710,12 @@ if ((Test-Path (Join-Path $ArtifactPath "trigger")) -and ($triggerCheck))
         }
 
         # Get trigger postfix
-        $triggerPostfix = $trigger.BaseName.Substring($trigger.BaseName.Length - 4, 4)
+        $triggerPostfix = $trigger.BaseName.Substring($trigger.BaseName.LastIndexOf($namingSeparator))
 
         # Check trigger name postfix
         if ($allowPostFixes -NotContains $triggerPostfix)
         {
-            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Trigger postfix $triggerPostfix is incorrect, expected $($allowPostFixes -join " or ") for [$($trigger.BaseName)]"
+            Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Trigger postfix $triggerPostfix is incorrect, expected $($allowPostFixes -join " or ") for [$($trigger.BaseName)]"
             $triggerSubCount++
         }
         else
@@ -738,9 +743,9 @@ else
     {
         Write-Output "Trigger check disabled"
     }
-    elseif (-not (Test-Path (Join-Path $ArtifactPath "trigger")))
+    elseif (-not (Test-Path $triggerDirectory))
     {
-        Write-Output "No triggers found in artifact"
+        Write-Output "No Triggers found in artifact"
     }
 
     Write-Output "=============================================================================================="
@@ -752,13 +757,16 @@ else
 # Retrieve all checks from naming convention config and then filter on Dataflow to get its validate value
 [bool]$dataflowCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "Dataflow" }).validate
 
-if ((Test-Path (Join-Path $ArtifactPath "dataflow")) -and ($dataflowCheck))
+#Define variable for dataflow directory
+$dataflowDirectory = Join-Path $ArtifactPath "dataflow"
+
+if ((Test-Path $dataflowDirectory) -and ($dataflowCheck))
 {
     # Retrieve dataflow prefix
     $dataflowConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "Dataflow" }
 
     # Retrieve all dataflow files
-    $artifactDataflows = Get-ChildItem -Path (Join-Path $ArtifactPath "dataflow") -Filter *.json | Select-Object -Property FullName, BaseName
+    $artifactDataflows = Get-ChildItem -Path $dataflowDirectory -Filter *.json | Select-Object -Property FullName, BaseName
 
     # Loop through each dataflow file
     foreach ($dataflow in $artifactDataflows)
@@ -777,13 +785,13 @@ if ((Test-Path (Join-Path $ArtifactPath "dataflow")) -and ($dataflowCheck))
         # Dataflow logging
         Write-Output ""
         Write-Output "=============================================================================================="
-        Write-Output "Checking dataflow [$($dataflowPath)$($dataflow.BaseName)]"
+        Write-Output "Checking Dataflow [$($dataflowPath)$($dataflow.BaseName)]"
         Write-Output "=============================================================================================="
 
         # Check dataflow name prefix
         if (!$dataflow.BaseName.StartsWith($dataflowConvention.prefix + $namingSeparator))
         {
-            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Dataflow prefix is not equals [$($dataflowConvention.prefix)$($namingSeparator)] for [$($dataflow.BaseName)]"
+            Write-Error "##vso[task.LogIssue type=error;]$([char]10007) Dataflow prefix is not equals [$($dataflowConvention.prefix)$($namingSeparator)] for [$($dataflow.BaseName)]"
             $Script:dataflowErrorCount++
         }
         else
@@ -801,7 +809,7 @@ else
     {
         Write-Output "Dataflow check disabled"
     }
-    elseif (-not (Test-Path (Join-Path $ArtifactPath "dataflow")))
+    elseif (-not (Test-Path $dataflowDirectory))
     {
         Write-Output "No dataflows found in artifact"
     }
@@ -814,38 +822,41 @@ else
 # Retrieve all checks from naming convention config and then filter on sqlscript to get its validate value
 [bool]$sqlScriptCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "SqlScript" }).validate
 
-if ((Test-Path (Join-Path $ArtifactPath "sqlscript")) -and ($sqlScriptCheck)) 
+#Define variable for sqlscript directory
+$sqlScriptDirectory = Join-Path $ArtifactPath "sqlscript"
+
+if ((Test-Path $sqlScriptDirectory) -and ($sqlScriptCheck)) 
 {
     # Retrieve sqlscript prefix
     $sqlScriptConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "SqlScript" }
 
     # Retrieve all sqlscript files
-    $artifactSqlScripts = Get-ChildItem -Path (Join-Path $ArtifactPath "sqlscript") -Filter *.json | Select-Object -Property FullName, BaseName
+    $artifactSqlScripts = Get-ChildItem -Path $sqlScriptDirectory -Filter *.json | Select-Object -Property FullName, BaseName
 
     # Loop through each sqlscript file
-    foreach ($sqlscript in $artifactSqlScripts) 
+    foreach ($sqlScript in $artifactSqlScripts)
     {
         # Read file content to retrieve sqlscript JSON
-        $sqlscriptContent = Get-Content $sqlscript.FullName -Raw | ConvertFrom-Json
+        $sqlScriptContent = Get-Content $sqlScript.FullName -Raw | ConvertFrom-Json
 
         # Determine sqlscript path within the Synapse Workspace for (showing only)
-        $sqlscriptPath = "\"
+        $sqlScriptPath = "\"
         # If sqlscript is not in the root retrieve folder from JSON
-        if (HasProperty -JsonObject $sqlscriptContent.properties -PropertyName "folder")
+        if (HasProperty -JsonObject $sqlScriptContent.properties -PropertyName "folder")
         {
-            $sqlscriptPath += $sqlScriptContent.properties.folder.name.replace("/","\") + "\"
+            $sqlScriptPath += $sqlScriptContent.properties.folder.name.replace("/","\") + "\"
         }
 
-        # sqlscript logging
-        Write-Output ""
-        Write-Output "=============================================================================================="
-        Write-Output "Checking sqlscript [$($sqlscriptPath)$($sqlscript.BaseName)]"
-        Write-Output "=============================================================================================="
+        # Sqlscript logging
+        Write-Output "",
+            "==============================================================================================",
+            "Checking SQL-Script [$($sqlScriptPath)$($sqlScript.BaseName)]",
+            "=============================================================================================="
 
         # Check sqlscript name prefix
-        if (!$sqlscript.BaseName.StartsWith($sqlScriptConvention.prefix + $namingSeparator)) 
+        if (!$sqlScript.BaseName.StartsWith($sqlScriptConvention.prefix + $namingSeparator)) 
         {
-            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) SQL script prefix is not equals [$($sqlscriptConvention.prefix)$($namingSeparator)] for [$($sqlscript.BaseName)]"
+            Write-Error "##vso[task.LogIssue type=error;]$([char]10007) SQL script prefix is not equals [$($sqlScriptConvention.prefix)$($namingSeparator)] for [$($sqlScript.BaseName)]"
             $Script:sqlScriptErrorCount++
         } 
         else 
@@ -863,7 +874,7 @@ else
     {
         Write-Output "SQL Script check disabled"
     } 
-    elseif (-not (Test-Path (Join-Path $ArtifactPath "sqlscript"))) 
+    elseif (-not (Test-Path $sqlScriptDirectory)) 
     {
         Write-Output "No SQL Script found in artifact"
     }
@@ -873,41 +884,44 @@ else
 #####################################################
 # KQL SCRIPTS
 #####################################################
-# Retrieve all checks from naming convention config and then filter on kqlscript to get its validate value
+# Retrieve all checks from naming convention config and then filter on KqlScript to get its validate value
 [bool]$kqlScriptCheck = ($namingConvention.Checks | Where-Object { $_.Type -eq "KqlScript" }).validate
 
-if ((Test-Path (Join-Path $ArtifactPath "kqlscript")) -and ($kqlScriptCheck)) 
+#Define variable for kqlscript directory
+$kqlScriptDirectory = Join-Path $ArtifactPath "kqlscript"
+
+if ((Test-Path $kqlScriptDirectory) -and ($kqlScriptCheck)) 
 {
     # Retrieve kqlscript prefix
     $kqlScriptConvention = $namingConvention.Prefixes | Where-Object { $_.Type -eq "KqlScript" }
 
     # Retrieve all kqlscript files
-    $artifactKqlScripts = Get-ChildItem -Path (Join-Path $ArtifactPath "kqlscript") -Filter *.json | Select-Object -Property FullName, BaseName
+    $artifactKqlScripts = Get-ChildItem -Path $kqlScriptDirectory -Filter *.json | Select-Object -Property FullName, BaseName
 
     # Loop through each kqlscript file
-    foreach ($kqlscript in $artifactKqlScripts) 
+    foreach ($kqlScript in $artifactKqlScripts)
     {
         # Read file content to retrieve kqlscript JSON
-        $kqlscriptContent = Get-Content $kqlscript.FullName -Raw | ConvertFrom-Json
+        $kqlScriptContent = Get-Content $kqlScript.FullName -Raw | ConvertFrom-Json
 
         # Determine kqlscript path within the Synapse Workspace for (showing only)
-        $kqlscriptPath = "\"
+        $kqlScriptPath = "\"
         # If kqlscript is not in the root retrieve folder from JSON
-        if (HasProperty -JsonObject $kqlscriptContent.properties -PropertyName "folder")
+        if (HasProperty -JsonObject $kqlScriptContent.properties -PropertyName "folder")
         {
-            $kqlscriptPath += $kqlScriptContent.properties.folder.name.replace("/","\") + "\"
+            $kqlScriptPath += $kqlScriptContent.properties.folder.name.replace("/","\") + "\"
         }
 
-        # kqlscript logging
-        Write-Output ""
-        Write-Output "=============================================================================================="
-        Write-Output "Checking kqlscript [$($kqlscriptPath)$($kqlscript.BaseName)]"
-        Write-Output "=============================================================================================="
+        # Kqlscript logging
+        Write-Output "",
+            "==============================================================================================",
+            "Checking KQL-Script [$($kqlScriptPath)$($kqlScript.BaseName)]",
+            "=============================================================================================="
 
         # Check kqlscript name prefix
-        if (!$kqlscript.BaseName.StartsWith($kqlScriptConvention.prefix + $namingSeparator)) 
+        if (!$kqlScript.BaseName.StartsWith($kqlScriptConvention.prefix + $namingSeparator)) 
         {
-            Write-Host "##vso[task.LogIssue type=error;]$([char]10007) KQL script prefix is not equals [$($kqlscriptConvention.prefix)$($namingSeparator)] for [$($kqlscript.BaseName)]"
+            Write-Error "##vso[task.LogIssue type=error;]$([char]10007) KQL script prefix is not equals [$($kqlScriptConvention.prefix)$($namingSeparator)] for [$($kqlScript.BaseName)]"
             $Script:kqlScriptErrorCount++
         } 
         else 
@@ -925,7 +939,7 @@ else
     {
         Write-Output "KQL Script check disabled"
     } 
-    elseif (-not (Test-Path (Join-Path $ArtifactPath "kqlscript"))) 
+    elseif (-not (Test-Path $kqlScriptDirectory)) 
     {
         Write-Output "No KQL Script found in artifact"
     }
@@ -963,7 +977,7 @@ if ($postfixCheck)
     foreach ($resource in $incorrectResources)
     {
         # Write all 'errors' to screen
-        Write-Host "##vso[task.LogIssue type=error;]$([char]10007) $((Get-Item $resource.FullName).Directory.Name) resource [$($resource.BaseName)] has a _copy postfix"
+        Write-Error "##vso[task.LogIssue type=error;]$([char]10007) $((Get-Item $resource.FullName).Directory.Name) resource [$($resource.BaseName)] has a _copy postfix"
     }
 }
 
@@ -987,9 +1001,9 @@ LogSummary  -ValidationDisabled $notebookCheck `
             -NumberOfErrors $Script:notebookErrorCount `
             -NumberOfSucceeds $Script:notebookSuccessCount `
             -ValidationName "Notebooks"
-LogSummary  -ValidationDisabled $linkedserviceCheck `
-            -NumberOfErrors $Script:linkedserviceErrorCount `
-            -NumberOfSucceeds $Script:linkedserviceSuccessCount `
+LogSummary  -ValidationDisabled $linkedServiceCheck `
+            -NumberOfErrors $Script:linkedServiceErrorCount `
+            -NumberOfSucceeds $Script:linkedServiceSuccessCount `
             -ValidationName "Linked Services"
 LogSummary  -ValidationDisabled $datasetCheck `
             -NumberOfErrors $Script:datasetErrorCount `
@@ -1003,13 +1017,13 @@ LogSummary  -ValidationDisabled $dataflowCheck `
             -NumberOfErrors $Script:dataflowErrorCount `
             -NumberOfSucceeds $Script:dataflowSuccessCount `
             -ValidationName "Dataflows"
-LogSummary  -ValidationDisabled $sqlscriptCheck `
-            -NumberOfErrors $Script:sqlscriptErrorCount `
-            -NumberOfSucceeds $Script:sqlscriptSuccessCount `
+LogSummary  -ValidationDisabled $sqlScriptCheck `
+            -NumberOfErrors $Script:sqlScriptErrorCount `
+            -NumberOfSucceeds $Script:sqlScriptSuccessCount `
             -ValidationName "SQL Scripts"
 LogSummary  -ValidationDisabled $kqlscriptCheck `
-            -NumberOfErrors $Script:kqlscriptErrorCount `
-            -NumberOfSucceeds $Script:kqlscriptSuccessCount `
+            -NumberOfErrors $Script:kqlScriptErrorCount `
+            -NumberOfSucceeds $Script:kqlScriptSuccessCount `
             -ValidationName "KQL Scripts"
 LogSummary  -ValidationDisabled $postfixCheck `
             -NumberOfErrors $Script:invalidPostfixErrorCount `
