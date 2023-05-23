@@ -398,10 +398,10 @@ function LogSummary
     # Writing summary log to screen
     Write-Host $messageText
 }
-
 #####################################################
 # END Functions
 #####################################################
+
 # Retrieve naming separator from naming convention config
 [string]$namingSeparator = $namingConvention.NamingSeparator
 
