@@ -9,7 +9,7 @@
 		{"type":"Dataflow",		"validate":true},
 		{"type":"SqlScript",	"validate":true},
 		{"type":"KqlScript",	"validate":true},
-		{"type":"Postfixes",	"validate":true}
+		{"type":"CopyPostfixes","validate":true}
 	],
 "Prefixes": [
 	    {"type":"Pipeline",			"prefix":"PL"},
