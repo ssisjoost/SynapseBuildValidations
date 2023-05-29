@@ -7,13 +7,13 @@ There are multiple Naming Conventions, most of them are for Azure Data Factory l
 Suggestions for further improvements are below. Please suggest your own.
 - [x] Add folder information for Data Flows, SQL Scripts and KQL Scripts
 - [ ] Naming conventions within Data Flows (please share yours)
-- [ ] Option to skip or ignore certain parts from Synapse if you for example don't have/want a naming convention within the Data Flows
+- [x] Option to skip or ignore certain parts from Synapse if you for example don't have/want a naming convention within the Data Flows
 - [ ] Option to change some of the errors into warnings for when you just want to test the basics
 - [ ] Option to allow a certain percentage of errors before failing the validation
 - [ ] Option to only show the mistakes and ignore everything that is correct
 - [ ] Take Linked Service into consideration to determine Data Set names
 - [x] Look for items ending on _copy1 or _copy2 on resource level
-- [ ] Look for items ending on _copy1 or _copy2 on activity level
+- [x] Look for items ending on _copy1 or _copy2 on activity level
 - [ ] Look for bad defaults settings like the 7 day timeout
 - [ ] Look empty descriptions
 - [ ] Make it available for ADF
@@ -30,3 +30,4 @@ Suggestions for further improvements are below. Please suggest your own.
 - 0.07 - Check Notebook, SQL Script and KQL Script prefixes
 - 0.08 - Adding ValidateNamingConventions.yml file to create DevOps pipeline
 - 0.09 - Adding _copy check on resource level
+- 0.10 - Making validations optional
