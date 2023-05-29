@@ -379,9 +379,10 @@ function CheckDatasetServicePrefix
         [string]$DatasetPrefix
     )
 
-    # Retrieve the naming convention for the given dataset type
+    # Retrieve specific Dataset prefix from naming convention object
     $datasetConvention = $Script:namingConvention.Datasets | Where-Object { $_.Type -eq $DatasetType }
 
+    # Check if there is a prefix available
     if (!$datasetConvention)
     {
         # If the dataset type is unknown, log an error and increment the error count
@@ -438,13 +439,17 @@ function LogSummary {
     [int]$lengthText = 18
 
     # Create the first part of the summary row until the colon
+    # Get the validation name and add spaces until the max lengthText is reached
     [string]$messageText = $ValidationName + (' ' * ($lengthText - $ValidationName.Length)) + ": "
 
+    # Add the second part of the summary text after the colon
+    # Check if validation was enabled
     if (!$ValidationEnabled)
     {
         # Validation disabled, so not showing any numbers
         $messageText += "validation disabled"
     }
+    # Check if there where any of these objects at all
     elseif (($NumberOfErrors + $NumberOfSucceeds) -eq 0)
     {
         # No resources found of this type
@@ -465,7 +470,7 @@ function LogSummary {
 # END Functions
 #####################################################
 
-# Retrieve naming separator from naming convention config
+# Retrieve naming separator from naming convention object
 [string]$Script:namingSeparator = $Script:namingConvention.NamingSeparator
 
 #####################################################
@@ -475,10 +480,10 @@ function LogSummary {
 [bool]$pipelineCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "Pipeline" }).validate
 [bool]$activityCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "Activity" }).validate
 
-#Define variable for pipeline directory
+# Define variable for pipeline directory
 $pipelineDirectory = Join-Path $ArtifactPath "pipeline"
 
-# Check if there are pipelines and if pipelines or activities need to be validated
+# Check if there are any pipelines and if pipelines or activities need to be validated
 if ((Test-Path $pipelineDirectory) -and ($pipelineCheck -or $activityCheck))
 {
     # Retrieve pipeline prefix
@@ -497,10 +502,11 @@ if ((Test-Path $pipelineDirectory) -and ($pipelineCheck -or $activityCheck))
         $pipelinePath = "\"
         if (HasProperty -JsonObject $pipelineContent.properties -PropertyName "folder")
         {
+            # Build up path and replace forward slash with back slash
             $pipelinePath = $pipelinePath + $pipelineContent.properties.folder.name.replace("/","\") + "\"
         }
 
-        # Pipeline logging
+        # Pipeline header logging
         Write-Output "",
             "==============================================================================================",
             "Checking $(if(!$pipelineCheck -and $activityCheck) {"activities of "})Pipeline [$($pipelinePath)$($pipeline.BaseName)]",
@@ -512,11 +518,13 @@ if ((Test-Path $pipelineDirectory) -and ($pipelineCheck -or $activityCheck))
             # Check Pipeline name prefix
             if(!$pipeline.BaseName.StartsWith($pipelineConvention.prefix + $Script:namingSeparator))
             {
+                # Show error message
                 Write-Host "##vso[task.LogIssue type=error;]$([char]10007) Pipeline prefix is not equals [$($pipelineConvention.prefix)$($Script:namingSeparator)] for [$($pipeline.BaseName)]"
                 $Script:pipelineErrorCount++
             }
             else
             {
+                # Show correct message
                 Write-Output "$([char]10003) Pipeline prefix is correct"
                 $Script:pipelineSuccessCount++
             }
@@ -528,6 +536,7 @@ if ((Test-Path $pipelineDirectory) -and ($pipelineCheck -or $activityCheck))
         #####################################################
         # ACTIVITIES
         #####################################################
+        # Check if the activities need to be validated
         if ($activityCheck)
         {
             LoopActivities  -LevelName $pipeline.BaseName `
@@ -561,9 +570,10 @@ else
 # Retrieve all checks from naming convention config and filter on Notebook to get its validate value
 [bool]$notebookCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "Notebook" }).validate
 
-#Define variable for notebook directory
+# Define variable for notebook directory
 $notebookDirectory = Join-Path $ArtifactPath "notebook"
 
+# Check if there are any notebooks and whether the need to be validated
 if ((Test-Path $notebookDirectory) -and ($notebookCheck))
 {
     # Retrieve notebook prefix
@@ -584,6 +594,7 @@ if ((Test-Path $notebookDirectory) -and ($notebookCheck))
         # If notebook is not in the root retrieve folder from JSON
         if (HasProperty -JsonObject $notebookContent.properties -PropertyName "folder")
         {
+            # Build up path and replace forward slash with back slash
             $notebookPath = $notebookPath + $notebookContent.properties.folder.name.replace("/","\") + "\"
         }
 
@@ -628,9 +639,10 @@ else
 # Retrieve all checks from naming convention config and then filter on LinkedService to get its validate value
 [bool]$linkedServiceCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "LinkedService" }).validate
 
-#Define variable for linked service directory
+# Define variable for linked service directory
 $linkedServiceDirectory = Join-Path $ArtifactPath "linkedService"
 
+# Check if there are any linked services and whether the need to be validated
 if ((Test-Path $linkedServiceDirectory) -and ($linkedServiceCheck))
 {
     # Retrieve linked service prefix
@@ -657,6 +669,7 @@ if ((Test-Path $linkedServiceDirectory) -and ($linkedServiceCheck))
         # Defining and filtering out default linked services
         $defaultLinkedServiceNames = @(($SynapseDevWorkspaceName + "-WorkspaceDefaultSqlServer"), ($SynapseDevWorkspaceName + "-WorkspaceDefaultStorage"))
 
+        # Exclude the unchangable default Linked Services
         if ($defaultLinkedServiceNames -contains $linkedService.BaseName)
         {
             Write-Output "$([char]10003) Ignoring default Linked Services that cannot be renamed"
@@ -692,9 +705,10 @@ else
 # Retrieve all checks from naming convention config and then filter on Datasets to get its validate value
 [bool]$datasetCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "Dataset" }).validate
 
-#Define variable for dataset directory
+# Define variable for dataset directory
 $datasetDirectory = Join-Path $ArtifactPath "dataset"
 
+# Check if there are any datasets and whether the need to be validated
 if ((Test-Path $datasetDirectory) -and ($datasetCheck))
 {
     # Retrieve dataset prefix
@@ -747,9 +761,10 @@ else
 # Retrieve all checks from naming convention config and then filter on Trigger to get its validate value
 [bool]$triggerCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "Trigger" }).validate
 
-#Define variable for trigger directory
+# Define variable for trigger directory
 $triggerDirectory = Join-Path $ArtifactPath "trigger"
 
+# Check if there are any triggers and whether the need to be validated
 if ((Test-Path $triggerDirectory) -and ($triggerCheck))
 {
     # Retrieve trigger prefix
@@ -764,7 +779,7 @@ if ((Test-Path $triggerDirectory) -and ($triggerCheck))
     # Loop through each trigger file
     foreach ($trigger in $artifactTriggers)
     {
-        # Initialize count for each trigger
+        # Initialize count for each trigger error
         $triggerSubCount = 0
 
         # Trigger logging
@@ -835,6 +850,7 @@ else
 #Define variable for dataflow directory
 $dataflowDirectory = Join-Path $ArtifactPath "dataflow"
 
+# Check if there are any dataflows and whether the need to be validated
 if ((Test-Path $dataflowDirectory) -and ($dataflowCheck))
 {
     # Retrieve dataflow prefix
@@ -897,9 +913,10 @@ else
 # Retrieve all checks from naming convention config and then filter on sqlscript to get its validate value
 [bool]$sqlScriptCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "SqlScript" }).validate
 
-#Define variable for sqlscript directory
+# Define variable for sqlscript directory
 $sqlScriptDirectory = Join-Path $ArtifactPath "sqlscript"
 
+# Check if there are any sql scripts and whether the need to be validated
 if ((Test-Path $sqlScriptDirectory) -and ($sqlScriptCheck))
 {
     # Retrieve sqlscript prefix
@@ -962,9 +979,10 @@ else
 # Retrieve all checks from naming convention config and then filter on KqlScript to get its validate value
 [bool]$kqlScriptCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "KqlScript" }).validate
 
-#Define variable for kqlscript directory
+# Define variable for kqlscript directory
 $kqlScriptDirectory = Join-Path $ArtifactPath "kqlscript"
 
+# Check if there are any kql scripts and whether the need to be validated
 if ((Test-Path $kqlScriptDirectory) -and ($kqlScriptCheck))
 {
     # Retrieve kqlscript prefix
@@ -1027,6 +1045,7 @@ else
 # Retrieve all checks from naming convention config and then filter on Postfixes to get its validate value
 [bool]$postfixCheck = ($Script:namingConvention.Checks | Where-Object { $_.Type -eq "CopyPostfixes" }).validate
 
+# Check if _copy postfixes need to be valided
 if ($postfixCheck)
 {
     # Get all resources checking on the _copy** postfix
