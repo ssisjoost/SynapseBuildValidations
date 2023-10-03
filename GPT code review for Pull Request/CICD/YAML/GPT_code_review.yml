@@ -1,0 +1,56 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+pool:
+  vmImage: 'windows-latest'
+#  name: Default
+
+variables:
+- group: GPT_connection_data
+
+jobs:
+  - job:
+    displayName: 'Get GPT feedback'
+    steps:
+    - checkout: self
+      clean: true
+      persistCredentials: true
+    - task: PowerShell@2
+      displayName: 'Treeview to check agent folders'
+      inputs:
+        targetType: 'inline'
+        script: |
+          Write-Host "Showing folder $(System.DefaultWorkingDirectory)"
+          tree "$(System.DefaultWorkingDirectory)" /F
+    - task: PowerShell@2
+      displayName: 'Get remote branches'
+      inputs:
+        targetType: 'inline'
+        script: |
+          git fetch
+
+    - task: UsePythonVersion@0
+      displayName: 'Select python version 3.10'
+      inputs:
+        versionSpec: '3.10'
+        architecture: 'x64'
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r $(System.DefaultWorkingDirectory)/CICD/Python/requirements.txt
+      displayName: 'Install dependencies'
+
+    - task: PythonScript@0
+      displayName: 'Get GPT feedback for changed notebooks'
+      inputs:
+        scriptSource: 'filePath'
+        scriptPath: '$(System.DefaultWorkingDirectory)/CICD/Python/get_GPT_feedback.py'
+      env:
+        openai_api_type: '$(openai_api_type)'
+        openai_api_base: '$(openai_api_base)'
+        openai_api_version: '$(openai_api_version)'
+        openai_api_key: '$(openai_api_key)'
+        synapse_root_folder: '$(synapse_root_folder)'
+        system_accesstoken: $(System.AccessToken)
