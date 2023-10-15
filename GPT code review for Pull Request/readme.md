@@ -1,5 +1,5 @@
 # Code review through a GPT model for Pull Requests
-Use a GPT model to review changed synapse notebooks and provide suggestions for improvement. The GPT model is instructed to respond as a senior engineer and provide textual feedback of what can be improved. Addtionally the model provides code suggestions. Read this [blog post](https://microsoft-bitools.blogspot.com/2023/04/devops-build-validation-to-check.html) on how to implement this validation in your Azure DevOps project.
+Use a GPT model to review changed synapse notebooks and provide suggestions for improvement. The GPT model is instructed to respond as a senior engineer and provide textual feedback of what can be improved. Addtionally the model provides code suggestions. Read this [blog post](https://microsoft-bitools.blogspot.com/2023/10/review-synapse-notebooks-with-your-own.html) on how to implement this validation in your Azure DevOps project.
 
 ## debugging
 The .env file (in CICD/Python/.env) serves as a way to set the environment variables when you want to test the get_GPT_feedback.py script.
