@@ -6,3 +6,6 @@ This Build Validation checks the naming conventions for your **Azure Synapse Wor
 
 ## Branch validation for Pull Requests
 Validating source and target branches to avoid accidentily skipping branches because you messed up when creating the pull request. A four-eyes principle is always the first step, but a script that automatically checks the branches when creating the pull request is even better. [More Details](/Branch%20validation%20for%20Pull%20Requests)
+
+## Code review through a GPT model for Pull Requests
+Use a GPT model to review changed synapse notebooks and provide suggestions for improvement. The GPT model is instructed to respond as a senior engineer and provide textual feedback of what can be improved. Addtionally the model provides code suggestions. [More Details](/GPT%20code%20review%20for%20Pull%20Request)
