@@ -16,12 +16,13 @@ from pathlib import Path
 #from dotenv import load_dotenv
 #load_dotenv()
 
-# Check if essential environment variables are set
+# Define the list of required environment variables
 required_env_vars = ['synapse_root_folder', 'openai_api_type', 'openai_api_base', 'openai_api_version', 'openai_api_key',
                      'system_collectionuri', 'system_pullrequest_pullrequestid', 'system_teamproject', 'build_repository_id', 
                      'system_pullrequest_TargetBranch', 'system_pullrequest_sourcebranch', 'system_accesstoken']
-missing_vars = [var for var in required_env_vars if not os.getenv(var)]
 
+# Check for missing environment variables and exit if any are missing
+missing_vars = [var for var in required_env_vars if not os.getenv(var)]
 if missing_vars:
     print(f"The following required environment variables are missing: {', '.join(missing_vars)}")
     sys.exit(1)
@@ -44,9 +45,9 @@ system_teamproject = os.getenv('system_teamproject')
 build_repository_id = os.getenv('build_repository_id')
 system_accesstoken = os.getenv('system_accesstoken')
 
-######
+##############################################################
 # GIT changes of latest commit to dataframe
-######
+##############################################################
 
 def get_changed_files(): 
     """
@@ -65,6 +66,7 @@ def get_changed_files():
 
     return git_output_rows
 
+# Try to fetch the list of changed files
 try:
     changed_files_list = get_changed_files()
 except Exception as e:
@@ -78,70 +80,86 @@ filtered_changed_files_list = [item for item in changed_files_list if item.start
 #Extract filenames to a list
 filtered_changed_files_list = [Path(item).name for item in filtered_changed_files_list]
 
-######
+##############################################################
 # Extract code from notebook files for changed notebook files
-######
+##############################################################
 
-# Create a list to store information from json files
+# Initialize an empty list to hold notebook information
 notebook_json_extract = []
 
 # Loop through each changed file based on DataFrame
 for file in filtered_changed_files_list:
+    # Construct the full path of the file
     file_path = os.path.join(os.getcwd(), synapse_root_folder, "notebook", file)
-    print(file_path)
-    print(os.getcwd())
-    print(synapse_root_folder)
-    print(file)
 
+    # Check if the file is a JSON file
     if file.endswith('.json'):
+        # Open the JSON file for reading
         with open(file_path, 'r') as json_file:
+            # Load JSON content into a Python dictionary
             json_content = json.load(json_file)
             
+            # Get the notebook name
             notebook_name = json_content.get("name")
+            
+            # Get the folder name if it exists, otherwise set to None
             if "folder" in json_content.get("properties"):
                 notebook_folder = json_content.get("properties").get("folder").get("name")
             else:
                 notebook_folder = None
+            
+            # Initialize an empty string to store notebook code
             notebook_code = ""
 
+            # Loop through each cell in the notebook
             for cell in json_content.get("properties").get("cells"):
                 
+                # Get the source and cell type of the current cell
                 source = cell.get("source")
                 cell_type = cell.get("cell_type")
-                #Convert source list to string
+                
+                # Convert source list to string while handling escape characters
                 source = [line.replace('"', '').replace('\r\n', '\n') for line in source]
-                #Set comment markers for markdown cells
+                
+                # If the cell is a markdown cell, prefix each line with a '#'
                 if cell_type == "markdown":
                     source = '#'.join(source)
                     source = '#' + source
                 else:
                     source = ''.join(source)
-                # Append source to notebook_string
+                
+                # Append source code to notebook_code
                 notebook_code += source + " \n" 
     
-            # Append select json file properties to the notebook_json_extract dataframe
-            notebook_json_extract.append([notebook_name, notebook_folder,notebook_code])
+            # Append notebook details to the list
+            notebook_json_extract.append([notebook_name, notebook_folder, notebook_code])
 
+# Create a DataFrame to store notebook details
 notebook_df = pd.DataFrame(notebook_json_extract, columns=["notebook_name", "notebook_folder", "notebook_code"])
+
+# Add empty columns for feedback
 notebook_df['feedback_status'] = None
 notebook_df['feedback_message'] = None
 notebook_df['feedback_code'] = None
 
-######
+##############################################################
 # Pass notebookcells to gpt to check for feedback
-######
+##############################################################
 
 def get_gpt_response(row):
     """
     Send notebook code to GPT-3 model for review.
     Updates the DataFrame row with feedback information.
     """
+    
+    # Define the system's role string for GPT-3
     content_system_string = """You are a senior programmer tasked with reviewing code in Synapse notebooks.
                         The code should be in SQL or Python. Your goal is to assess the code and only provide a feedback_message when the code can be improved.
                         This includes suggestions for how the code can be improved. 
                         """
     
-    content_assistant_string = """You response is given in a structured JSON format followed with the text: #STOP# 
+    # Define the assistant's role string for GPT-3
+    content_assistant_string = """Your response is given in a structured JSON format followed with the text: #STOP# 
                         - Feedback_status: 
                         - Set to 0 if the code is perfect and needs no changes. 
                         - Set to 1 if the code requires improvements. 
@@ -156,57 +174,56 @@ def get_gpt_response(row):
                         {\"Feedback_status\":1,\"Feedback_message\": \"This is where the improvement message is placed\",\"Feedback_code\": \"<Code block with the improvements applied to the code>\"}} #STOP# 
                         """
     
+    # Format the user's role string with the code to be reviewed
     content_user_string = f"""
-                        Asses the following code and respond with a structured json and no additional text 
+                        Assess the following code and respond with a structured json and no additional text 
                         ###Start code lines###    
                         {row['notebook_code']} 
                         ###End code lines###"""
     
     try:
-        #Send prompt with code to GPT api
+        # Send the prompt to the GPT-3 API and collect the response
         response = openai.ChatCompletion.create(
-            engine="GPT35",
+            engine="GPT35",  # Specify the GPT-3.5 model
             messages = [
-                {
-                    "role": "system",
-                    "content": f"{content_system_string}"
-                },
-                {
-                    "role": "assistant",
-                    "content": f"{content_assistant_string}"
-                },
-                {
-                    "role": "user",
-                    "content": f"{content_user_string}"
-                }
+                {"role": "system", "content": f"{content_system_string}"},
+                {"role": "assistant", "content": f"{content_assistant_string}"},
+                {"role": "user", "content": f"{content_user_string}"}
             ],
             temperature=0,
             max_tokens=6000,
             top_p=0.99,
             frequency_penalty=0,
             presence_penalty=0,
-            stop=["#STOP#"])
-        #Parse json from response message content
+            stop=["#STOP#"]
+        )
+        
+        # Parse the JSON response to extract the message content
         response_text = json.loads(response['choices'][0]['message']['content'])
+        
     except Exception as e:
+        # Print error message and return the original row if an error occurs
         print(f"An error occurred: {e}")
         return row
-    #Fill Feedback into dataframe row
+    
+    # Update the DataFrame row with feedback information
     row['feedback_status'] = response_text.get("Feedback_status")
     row['feedback_message'] = response_text.get("Feedback_message")
     row['feedback_code'] = response_text.get("Feedback_code")
     
-    return row
+    return row  # Return the updated row
 
 # Apply the get_gpt_response function to each row in the notebook_json_extract dataframe    
 notebook_df = notebook_df.apply(lambda x : get_gpt_response(x), axis=1)
 
-######
+##############################################################
 # Communicate feedback
-######
+##############################################################
 
 def add_comment_to_azure_pull_request(comment: str) -> bool:
-
+    """
+    Adds a comment to an Azure DevOps Pull Request.
+    """
     
     # Construct the URL for Azure DevOps Pull Request threads
     url = f"{system_collectionuri}{system_teamproject}/_apis/git/repositories/" \
@@ -220,6 +237,7 @@ def add_comment_to_azure_pull_request(comment: str) -> bool:
     }
     
     try:
+        # Prepare data payload for POST request
         data = {
             "comments": [
                 {
@@ -230,21 +248,29 @@ def add_comment_to_azure_pull_request(comment: str) -> bool:
             ],
             "status": 1
         }
+        
+        # Execute POST request
         r = requests.post(url=url, json=data, headers=headers)
         r.raise_for_status()  # Raise HTTPError for bad responses
         return True
     except requests.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}")  # Print HTTP error
-        print(r.json())  # Print server response for debugging
+        # Print HTTP error and server response for debugging
+        print(f"HTTP error occurred: {http_err}")
+        print(r.json())
         return False
     except Exception as err:
-        print(f"An error occurred: {err}")  # Print other types of errors
+        # Print other types of errors
+        print(f"An error occurred: {err}")
         return False
 
+# Loop through notebook DataFrame where feedback_status is 1 (indicating code improvements)
 for index, row in notebook_df.loc[notebook_df['feedback_status'] == 1].iterrows():
-    # Print to console
+    
+    # Print initial separator to console (only once)
     if index == 0:
         print("----------------------------------------------------")
+    
+    # Print notebook details and GPT feedback to console
     print(f'Notebook script: "{row["notebook_folder"]}/{row["notebook_name"]}"')
     print("----------------------------------------------------")
     print(">> GPT Feedback:")
@@ -253,15 +279,15 @@ for index, row in notebook_df.loc[notebook_df['feedback_status'] == 1].iterrows(
     print('\n'.join(["\t" + line for line in row["feedback_code"].split('\n')]))
     print("----------------------------------------------------")
 
-    # Create PR comment
+    # Prepare Pull Request comment string
     pr_comment = ""
-    pr_comment += f'# Notebook script: "{row["notebook_folder"]}/{row["notebook_name"]}"' + " \n\n" 
-    pr_comment += "**>> GPT Feedback:" + "** \n" 
+    pr_comment += f'# Notebook script: "{row["notebook_folder"]}/{row["notebook_name"]}"' + " \n\n"
+    pr_comment += "**>> GPT Feedback:" + "** \n"
     pr_comment += "\n".join([line for line in row["feedback_message"].split('\n')]) + "\n"
-    pr_comment += "**>> Suggested code:" + "** \n" 
-    pr_comment += "``` \n" 
+    pr_comment += "**>> Suggested code:" + "** \n"
+    pr_comment += "``` \n"
     pr_comment += "\n".join([line for line in row["feedback_code"].split('\n')]) + "\n"
-    pr_comment += "```" 
+    pr_comment += "```"
     
-    #Call function to add comment to PR request
+    # Call function to add comment to Azure Pull Request
     add_comment_to_azure_pull_request(pr_comment)
